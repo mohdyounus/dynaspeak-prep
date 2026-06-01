@@ -3,11 +3,13 @@ description: A free English language training guide for students preparing for t
 remote_theme: just-the-docs/just-the-docs
 
 # GitHub Pages settings
-url: ""
-baseurl: ""
+url: "https://mohdyounus.github.io"
+baseurl: "/dynaspeak-prep"
 
 # Navigation
 nav_sort: case_insensitive
+aux_links:
+  GitHub: https://github.com/mohdyounus/dynaspeak-prep
 
 # Footer
 footer_content: "Free study resource for DynaSpeak students in Auckland, New Zealand."
