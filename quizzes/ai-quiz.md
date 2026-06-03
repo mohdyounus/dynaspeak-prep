@@ -15,14 +15,9 @@ Generate fresh multiple-choice questions on any lesson topic, then get personali
 
 ## Setup
 
-Set your shared key first on [quizzes/ai-settings.md](quizzes/ai-settings.md). The field below is optional and will override the shared key for this page only.
+Claude is configured from site settings/hardcoded key. Select a topic and generate questions.
 
 <div class="aiq-setup-card">
-  <div class="aiq-setup-row">
-    <label for="apiKey"><strong>Claude API Key</strong><br>
-    <small>Optional override. If empty, this page will use the shared key saved in AI Settings.</small></label>
-    <input type="password" id="apiKey" class="aiq-api-input" placeholder="sk-ant-api03-…" autocomplete="off">
-  </div>
   <div class="aiq-setup-row">
     <label for="topicSelect"><strong>Select a Topic</strong></label>
     <select id="topicSelect" class="aiq-topic-select"></select>
