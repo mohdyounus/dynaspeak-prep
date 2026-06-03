@@ -15,10 +15,12 @@ Generate fresh multiple-choice questions on any lesson topic, then get personali
 
 ## Setup
 
+Set your shared key first on [quizzes/ai-settings.md](quizzes/ai-settings.md). The field below is optional and will override the shared key for this page only.
+
 <div class="aiq-setup-card">
   <div class="aiq-setup-row">
     <label for="apiKey"><strong>Claude API Key</strong><br>
-    <small>Get yours free at <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer">console.anthropic.com</a> — your key is only used in your browser.</small></label>
+    <small>Optional override. If empty, this page will use the shared key saved in AI Settings.</small></label>
     <input type="password" id="apiKey" class="aiq-api-input" placeholder="sk-ant-api03-…" autocomplete="off">
   </div>
   <div class="aiq-setup-row">
