@@ -1,3 +1,10 @@
+---
+layout: default
+title: Quiz Reading
+nav_exclude: true
+---
+
+
 # Quiz 3 — Reading
 
 **Covers:** Lesson 9 (reading strategies)  

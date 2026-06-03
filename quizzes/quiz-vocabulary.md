@@ -1,3 +1,10 @@
+---
+layout: default
+title: Quiz Vocabulary
+nav_exclude: true
+---
+
+
 # Quiz 2 — Vocabulary
 
 **Covers:** Lesson 6 (everyday vocabulary)  

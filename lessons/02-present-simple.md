@@ -1,3 +1,10 @@
+---
+layout: default
+title: Present Simple
+nav_exclude: true
+---
+
+
 # Lesson 2 — Present simple tense
 
 **Level:** Elementary  

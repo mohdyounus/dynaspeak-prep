@@ -1,3 +1,10 @@
+---
+layout: default
+title: Verb To Be
+nav_exclude: true
+---
+
+
 # Lesson 1 — The verb "to be"
 
 **Level:** Beginner–Elementary  

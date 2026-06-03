@@ -1,3 +1,10 @@
+---
+layout: default
+title: Quiz Writing
+nav_exclude: true
+---
+
+
 # Quiz 4 — Writing
 
 **Covers:** Lesson 10 (writing structure) + Grammar lessons 1–5  

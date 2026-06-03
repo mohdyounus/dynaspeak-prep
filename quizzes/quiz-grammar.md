@@ -1,3 +1,10 @@
+---
+layout: default
+title: Quiz Grammar
+nav_exclude: true
+---
+
+
 # Quiz 1 — Grammar
 
 **Covers:** Lessons 1–5 (verb to be, present simple, present continuous, past simple, articles)  

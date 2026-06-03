@@ -1,3 +1,10 @@
+---
+layout: default
+title: Articles
+nav_exclude: true
+---
+
+
 # Lesson 5 — Articles: a, an, the
 
 **Level:** Elementary  

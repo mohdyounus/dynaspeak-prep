@@ -1,3 +1,10 @@
+---
+layout: default
+title: Speaking Intro
+nav_exclude: true
+---
+
+
 # Lesson 7 — Speaking: how to introduce yourself
 
 **Level:** Beginner–Elementary  

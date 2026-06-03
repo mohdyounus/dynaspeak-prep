@@ -1,3 +1,10 @@
+---
+layout: default
+title: Past Simple
+nav_exclude: true
+---
+
+
 # Lesson 4 — Past simple tense
 
 **Level:** Elementary  

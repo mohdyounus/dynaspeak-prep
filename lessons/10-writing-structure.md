@@ -1,3 +1,10 @@
+---
+layout: default
+title: Writing Structure
+nav_exclude: true
+---
+
+
 # Lesson 10 — Writing structure
 
 **Level:** Elementary–Pre-intermediate  

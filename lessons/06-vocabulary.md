@@ -1,3 +1,10 @@
+---
+layout: default
+title: Vocabulary
+nav_exclude: true
+---
+
+
 # Lesson 6 — Everyday vocabulary
 
 **Level:** Beginner–Intermediate  

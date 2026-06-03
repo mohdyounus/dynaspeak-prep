@@ -1,3 +1,10 @@
+---
+layout: default
+title: Present Continuous
+nav_exclude: true
+---
+
+
 # Lesson 3 — Present continuous tense
 
 **Level:** Elementary  

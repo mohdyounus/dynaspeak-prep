@@ -1,3 +1,10 @@
+---
+layout: default
+title: Reading Strategies
+nav_exclude: true
+---
+
+
 # Lesson 9 — Reading strategies
 
 **Level:** Elementary–Pre-intermediate  

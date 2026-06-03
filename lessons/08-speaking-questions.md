@@ -1,3 +1,10 @@
+---
+layout: default
+title: Speaking Questions
+nav_exclude: true
+---
+
+
 # Lesson 8 — Speaking: common test questions
 
 **Level:** Elementary–Pre-intermediate  
