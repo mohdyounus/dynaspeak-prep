@@ -220,4 +220,3 @@ Home: [Back to home](/)
 }
 </style>
 
-<script src="{{ '/assets/js/ai-mock-test.js' | relative_url }}"></script>

@@ -358,4 +358,3 @@ Choose a practice mode:
 }
 </style>
 
-<script src="{{ '/assets/js/ai-quiz.js' | relative_url }}"></script>
