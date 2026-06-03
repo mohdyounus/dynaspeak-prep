@@ -501,7 +501,7 @@ function resetQuiz() {
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', () => {
+function initializeAiQuiz() {
   populateTopics();
   populateWritingTopics();
   setupPracticeSwitcher();
@@ -510,4 +510,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (writingTopicSelect) {
     writingTopicSelect.addEventListener('change', updateWritingPrompt);
   }
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeAiQuiz);
+} else {
+  initializeAiQuiz();
+}
