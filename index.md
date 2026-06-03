@@ -42,8 +42,8 @@ DynaSpeak is a free English language school run by Te Wananga o Aotearoa. Before
 
 ## Start Here
 
-- [Final mock test](./quizzes/mock-test.md)
-- [Quiz 1 — Grammar](./quizzes/quiz-grammar.md)
-- [Quiz 2 — Vocabulary](./quizzes/quiz-vocabulary.md)
-- [Quiz 3 — Reading](./quizzes/quiz-reading.md)
-- [Quiz 4 — Writing](./quizzes/quiz-writing.md)
+- [Final mock test](./quizzes/mock-test.html)
+- [Quiz 1 — Grammar](./quizzes/quiz-grammar.html)
+- [Quiz 2 — Vocabulary](./quizzes/quiz-vocabulary.html)
+- [Quiz 3 — Reading](./quizzes/quiz-reading.html)
+- [Quiz 4 — Writing](./quizzes/quiz-writing.html)
