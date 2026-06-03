@@ -23,4 +23,5 @@ search:
 # Plugins
 plugins:
   - jekyll-remote-theme
+  - jekyll-include-cache
   - jekyll-seo-tag

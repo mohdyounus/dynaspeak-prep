@@ -163,6 +163,6 @@ Choose the best word to complete each sentence:
 
 ---
 
-➡️ **Next lesson:** [Lesson 7 — Speaking: introduction](07-speaking-intro.md)  
-⬅️ **Previous lesson:** [Lesson 5 — Articles](05-articles.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next lesson:** [Lesson 7 — Speaking: introduction](07-speaking-intro.html)  
+⬅️ **Previous lesson:** [Lesson 5 — Articles](05-articles.html)  
+🏠 [Back to home](../index.html)

@@ -216,6 +216,6 @@ Read the following letter and answer questions 9–15.
 
 ---
 
-➡️ **Next quiz:** [Quiz 4 — Writing](quiz-writing.md)  
-⬅️ **Previous quiz:** [Quiz 2 — Vocabulary](quiz-vocabulary.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next quiz:** [Quiz 4 — Writing](quiz-writing.html)  
+⬅️ **Previous quiz:** [Quiz 2 — Vocabulary](quiz-vocabulary.html)  
+🏠 [Back to home](../index.html)

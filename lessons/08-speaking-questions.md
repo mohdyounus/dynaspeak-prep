@@ -120,6 +120,6 @@ Choose **two** topics from this lesson. Write 5–8 sentences for each one as if
 
 ---
 
-➡️ **Next lesson:** [Lesson 9 — Reading strategies](09-reading-strategies.md)  
-⬅️ **Previous lesson:** [Lesson 7 — Speaking introduction](07-speaking-intro.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next lesson:** [Lesson 9 — Reading strategies](09-reading-strategies.html)  
+⬅️ **Previous lesson:** [Lesson 7 — Speaking introduction](07-speaking-intro.html)  
+🏠 [Back to home](../index.html)

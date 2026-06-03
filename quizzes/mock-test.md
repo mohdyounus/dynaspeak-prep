@@ -70,7 +70,7 @@ End with: *With warm wishes, [your name]*
 
 ---
 
-🏠 [Back to home](../README.md)
+🏠 [Back to home](../index.html)
 
 <style>
 .quiz-shell {

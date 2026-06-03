@@ -218,6 +218,6 @@ When your teacher reads your written paragraph, they will notice:
 
 ---
 
-➡️ **Final step:** [Mock test — all skills](mock-test.md)  
-⬅️ **Previous quiz:** [Quiz 3 — Reading](quiz-reading.md)  
-🏠 [Back to home](../README.md)
+➡️ **Final step:** [Mock test — all skills](mock-test.html)  
+⬅️ **Previous quiz:** [Quiz 3 — Reading](quiz-reading.html)  
+🏠 [Back to home](../index.html)

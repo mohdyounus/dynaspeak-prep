@@ -122,6 +122,6 @@ Fill in the gaps with the present continuous form:
 
 ---
 
-➡️ **Next lesson:** [Lesson 4 — Past simple tense](04-past-simple.md)  
-⬅️ **Previous lesson:** [Lesson 2 — Present simple](02-present-simple.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next lesson:** [Lesson 4 — Past simple tense](04-past-simple.html)  
+⬅️ **Previous lesson:** [Lesson 2 — Present simple](02-present-simple.html)  
+🏠 [Back to home](../index.html)

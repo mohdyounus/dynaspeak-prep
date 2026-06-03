@@ -247,5 +247,5 @@
 
 ---
 
-➡️ **Next quiz:** [Quiz 2 — Vocabulary](quiz-vocabulary.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next quiz:** [Quiz 2 — Vocabulary](quiz-vocabulary.html)  
+🏠 [Back to home](../index.html)

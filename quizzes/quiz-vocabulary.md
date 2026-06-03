@@ -181,6 +181,6 @@
 
 ---
 
-➡️ **Next quiz:** [Quiz 3 — Reading](quiz-reading.md)  
-⬅️ **Previous quiz:** [Quiz 1 — Grammar](quiz-grammar.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next quiz:** [Quiz 3 — Reading](quiz-reading.html)  
+⬅️ **Previous quiz:** [Quiz 1 — Grammar](quiz-grammar.html)  
+🏠 [Back to home](../index.html)

@@ -172,5 +172,5 @@ Fill in the gaps with **am**, **is**, or **are**:
 
 ---
 
-➡️ **Next lesson:** [Lesson 2 — Present simple tense](02-present-simple.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next lesson:** [Lesson 2 — Present simple tense](02-present-simple.html)  
+🏠 [Back to home](../index.html)

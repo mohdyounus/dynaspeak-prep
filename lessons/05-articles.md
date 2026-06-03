@@ -106,6 +106,6 @@ Fill in the gaps with **a**, **an**, **the**, or **–** (no article):
 
 ---
 
-➡️ **Next lesson:** [Lesson 6 — Everyday vocabulary](06-vocabulary.md)  
-⬅️ **Previous lesson:** [Lesson 4 — Past simple](04-past-simple.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next lesson:** [Lesson 6 — Everyday vocabulary](06-vocabulary.html)  
+⬅️ **Previous lesson:** [Lesson 4 — Past simple](04-past-simple.html)  
+🏠 [Back to home](../index.html)

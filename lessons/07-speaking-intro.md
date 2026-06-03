@@ -139,6 +139,6 @@ Write a short introduction about yourself (5–8 sentences). Use the sentence st
 
 ---
 
-➡️ **Next lesson:** [Lesson 8 — Speaking: common test questions](08-speaking-questions.md)  
-⬅️ **Previous lesson:** [Lesson 6 — Vocabulary](06-vocabulary.md)  
-🏠 [Back to home](../README.md)
+➡️ **Next lesson:** [Lesson 8 — Speaking: common test questions](08-speaking-questions.html)  
+⬅️ **Previous lesson:** [Lesson 6 — Vocabulary](06-vocabulary.html)  
+🏠 [Back to home](../index.html)
