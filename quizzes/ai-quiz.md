@@ -40,28 +40,28 @@ Choose a practice mode:
   </button>
   </div>
 
-  <div id="writingSetupBlock" style="display:none">
-    <div class="aiq-setup-row">
-      <label for="writingTopicSelect"><strong>Select a Writing Topic</strong></label>
-      <select id="writingTopicSelect" class="aiq-topic-select"></select>
-    </div>
+<div id="writingSetupBlock" style="display:none">
+<div class="aiq-setup-row">
+<label for="writingTopicSelect"><strong>Select a Writing Topic</strong></label>
+<select id="writingTopicSelect" class="aiq-topic-select"></select>
+</div>
 
-    <div class="aiq-writing-prompt">
-      <strong>Prompt</strong>
-      <p id="writingPromptText"></p>
-    </div>
+<div class="aiq-writing-prompt">
+<strong>Prompt</strong>
+<p id="writingPromptText"></p>
+</div>
 
-    <div class="aiq-setup-row">
-      <label for="writingResponse"><strong>Your Writing</strong></label>
-      <textarea id="writingResponse" class="aiq-writing-textarea" placeholder="Write your response here..."></textarea>
-      <small class="aiq-help">Suggested length: 140-300 words depending on topic.</small>
-    </div>
+<div class="aiq-setup-row">
+<label for="writingResponse"><strong>Your Writing</strong></label>
+<textarea id="writingResponse" class="aiq-writing-textarea" placeholder="Write your response here..."></textarea>
+<small class="aiq-help">Suggested length: 140-300 words depending on topic.</small>
+</div>
 
-    <button id="evaluateWritingBtn" class="aiq-generate-btn" onclick="evaluateWriting()">
-      ✦ Evaluate My Writing
-    </button>
-    <div id="writing-feedback-container" style="display:none;margin-top:1rem"></div>
-  </div>
+<button id="evaluateWritingBtn" class="aiq-generate-btn" onclick="evaluateWriting()">
+✦ Evaluate My Writing
+</button>
+<div id="writing-feedback-container" style="display:none;margin-top:1rem"></div>
+</div>
 </div>
 
 <div id="quiz-container" style="display:none;margin-top:2rem"></div>
