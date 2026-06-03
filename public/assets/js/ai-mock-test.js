@@ -222,16 +222,63 @@ async function generateMockTest() {
 
     const parsed = JSON.parse(stripJsonFences(raw));
 
-    if (!Array.isArray(parsed.mcq) || parsed.mcq.length !== 30) {
-      throw new Error('AI did not return exactly 30 MCQ items. Please generate again.');
-    }
-    if (!Array.isArray(parsed.writingTasks) || parsed.writingTasks.length !== 2) {
-      throw new Error('AI did not return exactly 2 writing tasks. Please generate again.');
+    const sanitizedMcq = (Array.isArray(parsed.mcq) ? parsed.mcq : [])
+      .map((item) => {
+        const options = Array.isArray(item?.options) ? item.options.slice(0, 4).map((x) => String(x || '').trim()) : [];
+        if (options.length !== 4 || options.some((x) => !x)) return null;
+
+        const answer = Number.isInteger(item?.answer) && item.answer >= 0 && item.answer < 4 ? item.answer : 0;
+        return {
+          skill: String(item?.skill || 'General'),
+          q: String(item?.q || '').trim(),
+          options,
+          answer,
+          explanation: String(item?.explanation || '').trim()
+        };
+      })
+      .filter((x) => x && x.q)
+      .slice(0, 30);
+
+    const fallbackWriting = [
+      {
+        title: 'Task 1: Personal Paragraph',
+        prompt: 'Write 120-160 words introducing yourself, your daily routine, and your goals in New Zealand.',
+        targetWords: '120-160'
+      },
+      {
+        title: 'Task 2: Short Letter',
+        prompt: 'Write 120-160 words to a friend about your life in Auckland, challenges, and future plans.',
+        targetWords: '120-160'
+      }
+    ];
+
+    const sanitizedWriting = (Array.isArray(parsed.writingTasks) ? parsed.writingTasks : [])
+      .map((task) => ({
+        title: String(task?.title || '').trim(),
+        prompt: String(task?.prompt || '').trim(),
+        targetWords: String(task?.targetWords || '').trim()
+      }))
+      .filter((task) => task.title && task.prompt)
+      .slice(0, 2);
+
+    if (sanitizedMcq.length < 20) {
+      throw new Error('AI returned too few valid questions. Please generate again.');
     }
 
-    mockTestData = parsed;
+    mockTestData = {
+      mcq: sanitizedMcq,
+      writingTasks: sanitizedWriting.length ? sanitizedWriting : fallbackWriting
+    };
     mockAnswers = new Array(mockTestData.mcq.length).fill(null);
     renderMockTest();
+
+    if (sanitizedMcq.length < 30) {
+      const container = document.getElementById('mockTestContainer');
+      const note = document.createElement('div');
+      note.className = 'mt-note';
+      note.textContent = `AI generated ${sanitizedMcq.length} valid MCQ items this time instead of 30. You can still continue, or generate a new test.`;
+      container.prepend(note);
+    }
   } catch (e) {
     renderError(e.message);
   } finally {
