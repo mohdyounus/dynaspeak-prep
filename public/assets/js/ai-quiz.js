@@ -234,6 +234,7 @@ function escapeHtml(str) {
 function populateTopics() {
   const select = document.getElementById('topicSelect');
   if (!select) return;
+  select.innerHTML = '';
   TOPICS.forEach(t => {
     const opt = document.createElement('option');
     opt.value = t.id;
@@ -245,6 +246,7 @@ function populateTopics() {
 function populateWritingTopics() {
   const select = document.getElementById('writingTopicSelect');
   if (!select) return;
+  select.innerHTML = '';
   WRITING_TOPICS.forEach(t => {
     const opt = document.createElement('option');
     opt.value = t.id;
@@ -502,6 +504,10 @@ function resetQuiz() {
 // ── Init ───────────────────────────────────────────────────────────────────────
 
 function initializeAiQuiz() {
+  if (!document.getElementById('topicSelect') || !document.getElementById('practiceType')) {
+    return false;
+  }
+
   populateTopics();
   populateWritingTopics();
   setupPracticeSwitcher();
@@ -510,10 +516,25 @@ function initializeAiQuiz() {
   if (writingTopicSelect) {
     writingTopicSelect.addEventListener('change', updateWritingPrompt);
   }
+
+  return true;
+}
+
+function bootAiQuizWithRetry() {
+  if (initializeAiQuiz()) return;
+
+  let tries = 0;
+  const maxTries = 20;
+  const timer = setInterval(() => {
+    tries += 1;
+    if (initializeAiQuiz() || tries >= maxTries) {
+      clearInterval(timer);
+    }
+  }, 100);
 }
 
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeAiQuiz);
+  document.addEventListener('DOMContentLoaded', bootAiQuizWithRetry);
 } else {
-  initializeAiQuiz();
+  bootAiQuizWithRetry();
 }
