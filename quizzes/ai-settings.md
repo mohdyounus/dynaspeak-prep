@@ -130,3 +130,7 @@ Save your Claude API key once, and all AI quiz pages will use it automatically i
   document.addEventListener('DOMContentLoaded', loadSharedKey);
 })();
 </script>
+
+---
+
+Back to [AI quiz](/quizzes/ai-quiz) or [Home](/).
