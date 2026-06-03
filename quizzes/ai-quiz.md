@@ -15,7 +15,7 @@ Generate fresh multiple-choice questions on any lesson topic, then get personali
 
 ## Setup
 
-Claude is configured from site settings/hardcoded key. Select a topic and generate questions.
+Claude is configured securely on the server via Vercel environment variables. Select a topic and generate questions.
 
 <div class="aiq-setup-card">
   <div class="aiq-setup-row">

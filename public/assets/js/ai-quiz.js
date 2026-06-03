@@ -1,11 +1,5 @@
 // DynaSpeak AI Practice Quiz Engine
-// Calls Claude API directly from the browser to generate and evaluate quiz questions.
-// WARNING: The API key is visible in browser DevTools. Only use this on personal/private sites.
-
-// ── Replace this fallback key only if you really want a hardcoded default ─────
-const CLAUDE_API_KEY = 'sk-ant-YOUR_KEY_HERE';
-const CLAUDE_KEY_STORAGE = 'dynaspeak_claude_api_key';
-// ───────────────────────────────────────────────────────────────────────────────
+// Calls a server-side Next.js API route. Claude API key stays on server (Vercel env).
 
 const CLAUDE_MODEL = 'claude-haiku-4-5';
 
@@ -74,14 +68,6 @@ const TOPICS = [
 
 const SYSTEM_PROMPT = `You are an experienced English language teacher creating quiz questions for adult migrants living in Auckland, New Zealand who are preparing for a placement test at DynaSpeak language school. Questions should be practical, use real-life New Zealand contexts (work, family, healthcare, community), and be appropriate for the specified English level.`;
 
-function getEffectiveApiKey() {
-  const keyInput = document.getElementById('apiKey');
-  const fromInput = keyInput ? keyInput.value.trim() : '';
-  const fromStorage = localStorage.getItem(CLAUDE_KEY_STORAGE) || '';
-  const fromFallback = CLAUDE_API_KEY || '';
-  return fromInput || fromStorage || fromFallback;
-}
-
 // ── Prompt builders ────────────────────────────────────────────────────────────
 
 function buildGeneratePrompt(topic) {
@@ -131,18 +117,10 @@ Keep it encouraging — this is an adult learner working hard to improve their E
 // ── Claude API call ────────────────────────────────────────────────────────────
 
 async function callClaude(messages, system) {
-  const apiKey = getEffectiveApiKey();
-  if (!apiKey || apiKey === 'sk-ant-YOUR_KEY_HERE') {
-    throw new Error('No Claude API key found. Set it on the AI Settings page or enter it on this page.');
-  }
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('/api/claude', {
     method: 'POST',
     headers: {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-      'anthropic-dangerous-direct-browser-access': 'true'
+      'content-type': 'application/json'
     },
     body: JSON.stringify({
       model: CLAUDE_MODEL,
@@ -162,7 +140,7 @@ async function callClaude(messages, system) {
   }
 
   const data = await response.json();
-  return data.content[0].text;
+  return data.text || '';
 }
 
 // ── State ──────────────────────────────────────────────────────────────────────

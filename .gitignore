@@ -11,3 +11,4 @@ vendor/
 Thumbs.db
 
 .vercel
+.env*
