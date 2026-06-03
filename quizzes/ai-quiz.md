@@ -15,9 +15,22 @@ Generate fresh multiple-choice questions on any lesson topic, then get personali
 
 ## Setup
 
-Claude is configured securely on the server via Vercel environment variables. Select a topic and generate questions.
+Claude is configured securely on the server via Vercel environment variables.
+
+Choose a practice mode:
+- Multiple Choice Quiz: generate 5 dynamic questions and instant feedback.
+- Writing Practice: choose a writing topic, submit your response, and get AI evaluation.
 
 <div class="aiq-setup-card">
+  <div class="aiq-setup-row">
+    <label for="practiceType"><strong>Practice Type</strong></label>
+    <select id="practiceType" class="aiq-topic-select">
+      <option value="mcq">Multiple Choice Quiz</option>
+      <option value="writing">Writing Practice</option>
+    </select>
+  </div>
+
+  <div id="mcqSetupBlock">
   <div class="aiq-setup-row">
     <label for="topicSelect"><strong>Select a Topic</strong></label>
     <select id="topicSelect" class="aiq-topic-select"></select>
@@ -25,6 +38,30 @@ Claude is configured securely on the server via Vercel environment variables. Se
   <button id="generateBtn" class="aiq-generate-btn" onclick="generateQuiz()">
     ✦ Generate Quiz
   </button>
+  </div>
+
+  <div id="writingSetupBlock" style="display:none">
+    <div class="aiq-setup-row">
+      <label for="writingTopicSelect"><strong>Select a Writing Topic</strong></label>
+      <select id="writingTopicSelect" class="aiq-topic-select"></select>
+    </div>
+
+    <div class="aiq-writing-prompt">
+      <strong>Prompt</strong>
+      <p id="writingPromptText"></p>
+    </div>
+
+    <div class="aiq-setup-row">
+      <label for="writingResponse"><strong>Your Writing</strong></label>
+      <textarea id="writingResponse" class="aiq-writing-textarea" placeholder="Write your response here..."></textarea>
+      <small class="aiq-help">Suggested length: 140-300 words depending on topic.</small>
+    </div>
+
+    <button id="evaluateWritingBtn" class="aiq-generate-btn" onclick="evaluateWriting()">
+      ✦ Evaluate My Writing
+    </button>
+    <div id="writing-feedback-container" style="display:none;margin-top:1rem"></div>
+  </div>
 </div>
 
 <div id="quiz-container" style="display:none;margin-top:2rem"></div>
@@ -75,6 +112,34 @@ Claude is configured securely on the server via Vercel environment variables. Se
 }
 .aiq-generate-btn:hover { opacity: .88; }
 .aiq-generate-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.aiq-writing-prompt {
+  background: #f9fafb;
+  border: 1px solid var(--border-color, #dce0e8);
+  border-radius: 6px;
+  padding: .8rem .9rem;
+  margin-bottom: 1rem;
+}
+.aiq-writing-prompt p {
+  margin: .45rem 0 0;
+  font-size: .95rem;
+}
+.aiq-writing-textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: .65rem .75rem;
+  border: 1px solid var(--border-color, #ccc);
+  border-radius: 5px;
+  font-size: .95rem;
+  line-height: 1.55;
+  box-sizing: border-box;
+  resize: vertical;
+}
+.aiq-help {
+  display: block;
+  margin-top: .35rem;
+  color: var(--body-text-color, #666);
+}
 
 /* ── Loading ─────────────────────────────────────────────── */
 .aiq-loading {

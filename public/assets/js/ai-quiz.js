@@ -66,6 +66,33 @@ const TOPICS = [
   }
 ];
 
+const WRITING_TOPICS = [
+  {
+    id: 'essay-life-in-nz',
+    title: 'Comprehensive Essay: Life in New Zealand',
+    level: 'Intermediate',
+    prompt: 'Write a 220-300 word essay about your life in New Zealand. Include work or study, community life, and your goals for the next two years.'
+  },
+  {
+    id: 'essay-benefits-challenges-migration',
+    title: 'Comprehensive Essay: Benefits and Challenges of Migration',
+    level: 'Intermediate',
+    prompt: 'Write a 220-300 word balanced essay discussing both benefits and challenges of moving to a new country. Use clear paragraphs and linking words.'
+  },
+  {
+    id: 'paragraph-local-community',
+    title: 'Topic Writing: My Local Community',
+    level: 'Elementary-Intermediate',
+    prompt: 'Write 140-200 words describing your local community in Auckland. Mention places, people, services, and why this area is good (or difficult) for families.'
+  },
+  {
+    id: 'paragraph-healthy-routine',
+    title: 'Topic Writing: A Healthy Weekly Routine',
+    level: 'Elementary-Intermediate',
+    prompt: 'Write 140-200 words about your healthy weekly routine. Include food, exercise, sleep, and one change you want to make.'
+  }
+];
+
 const SYSTEM_PROMPT = `You are an experienced English language teacher creating quiz questions for adult migrants living in Auckland, New Zealand who are preparing for a placement test at DynaSpeak language school. Questions should be practical, use real-life New Zealand contexts (work, family, healthcare, community), and be appropriate for the specified English level.`;
 
 // ── Prompt builders ────────────────────────────────────────────────────────────
@@ -112,6 +139,33 @@ Write a short, warm feedback message (3–4 sentences) that:
 3. Gives one concrete, practical tip for improvement
 
 Keep it encouraging — this is an adult learner working hard to improve their English.`;
+}
+
+function buildWritingEvaluationPrompt(topic, writingText) {
+  return `You are assessing writing for an adult English learner preparing for DynaSpeak placement.
+
+Task: ${topic.title}
+Target level: ${topic.level}
+Prompt given to student: ${topic.prompt}
+
+Student writing:
+"""
+${writingText}
+"""
+
+Give feedback in this exact structure:
+1) Overall level estimate (A2/B1/B2) and one-line summary
+2) Scores out of 10:
+- Task response
+- Organization & coherence
+- Grammar accuracy
+- Vocabulary range
+3) Three strengths
+4) Three priority improvements
+5) Correct 3 specific sentences from the student's text (show Original -> Better)
+6) Provide a short improved sample paragraph (80-120 words) on the same topic
+
+Keep tone warm, practical, and encouraging.`;
 }
 
 // ── Claude API call ────────────────────────────────────────────────────────────
@@ -186,6 +240,76 @@ function populateTopics() {
     opt.textContent = t.title;
     select.appendChild(opt);
   });
+}
+
+function populateWritingTopics() {
+  const select = document.getElementById('writingTopicSelect');
+  if (!select) return;
+  WRITING_TOPICS.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t.id;
+    opt.textContent = t.title;
+    select.appendChild(opt);
+  });
+  updateWritingPrompt();
+}
+
+function setupPracticeSwitcher() {
+  const modeSelect = document.getElementById('practiceType');
+  if (!modeSelect) return;
+
+  const applyMode = () => {
+    const mode = modeSelect.value;
+    const mcqBlock = document.getElementById('mcqSetupBlock');
+    const writingBlock = document.getElementById('writingSetupBlock');
+    if (mcqBlock) mcqBlock.style.display = mode === 'mcq' ? 'block' : 'none';
+    if (writingBlock) writingBlock.style.display = mode === 'writing' ? 'block' : 'none';
+  };
+
+  modeSelect.addEventListener('change', applyMode);
+  applyMode();
+}
+
+function updateWritingPrompt() {
+  const topicId = document.getElementById('writingTopicSelect')?.value;
+  const promptBox = document.getElementById('writingPromptText');
+  const topic = WRITING_TOPICS.find((t) => t.id === topicId);
+  if (!promptBox || !topic) return;
+  promptBox.textContent = topic.prompt;
+}
+
+async function evaluateWriting() {
+  const topicId = document.getElementById('writingTopicSelect')?.value;
+  const topic = WRITING_TOPICS.find((t) => t.id === topicId);
+  const responseText = (document.getElementById('writingResponse')?.value || '').trim();
+  const feedbackWrap = document.getElementById('writing-feedback-container');
+  const btn = document.getElementById('evaluateWritingBtn');
+
+  if (!topic || !feedbackWrap || !btn) return;
+  if (responseText.length < 60) {
+    feedbackWrap.style.display = 'block';
+    feedbackWrap.innerHTML = '<div class="aiq-error"><strong>⚠ Error:</strong> Please write at least 60 characters so AI can evaluate your writing properly.</div>';
+    return;
+  }
+
+  btn.disabled = true;
+  feedbackWrap.style.display = 'block';
+  feedbackWrap.innerHTML = '<div class="aiq-loading"><div class="aiq-spinner"></div><p>Claude is evaluating your writing...</p></div>';
+
+  try {
+    const feedback = await callClaude(
+      [{ role: 'user', content: buildWritingEvaluationPrompt(topic, responseText) }],
+      'You are a supportive English writing assessor for adult learners in New Zealand.'
+    );
+
+    feedbackWrap.innerHTML =
+      `<div class="aiq-feedback"><strong>AI Writing Evaluation</strong><br><br>${escapeHtml(feedback).replace(/\n/g, '<br>')}</div>`;
+    feedbackWrap.scrollIntoView({ behavior: 'smooth' });
+  } catch (e) {
+    feedbackWrap.innerHTML = `<div class="aiq-error"><strong>⚠ Error:</strong> ${escapeHtml(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // ── Generate quiz ──────────────────────────────────────────────────────────────
@@ -377,4 +501,13 @@ function resetQuiz() {
 
 // ── Init ───────────────────────────────────────────────────────────────────────
 
-document.addEventListener('DOMContentLoaded', populateTopics);
+document.addEventListener('DOMContentLoaded', () => {
+  populateTopics();
+  populateWritingTopics();
+  setupPracticeSwitcher();
+
+  const writingTopicSelect = document.getElementById('writingTopicSelect');
+  if (writingTopicSelect) {
+    writingTopicSelect.addEventListener('change', updateWritingPrompt);
+  }
+});
