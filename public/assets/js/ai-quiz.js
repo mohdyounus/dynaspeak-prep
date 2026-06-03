@@ -63,6 +63,66 @@ const TOPICS = [
     title: 'Lesson 10 — Writing Structure',
     level: 'Elementary–Intermediate',
     description: 'Writing clear paragraphs with a topic sentence, supporting details, and a concluding sentence — using linking words (first, then, finally, because, however)'
+  },
+  {
+    id: 'parts-of-speech-nouns',
+    title: 'Parts of Speech — Nouns',
+    level: 'Beginner–Elementary',
+    description: 'Identifying common nouns, proper nouns, countable and uncountable nouns, and using plural forms correctly in everyday sentences'
+  },
+  {
+    id: 'parts-of-speech-pronouns',
+    title: 'Parts of Speech — Pronouns',
+    level: 'Beginner–Elementary',
+    description: 'Using subject pronouns, object pronouns, possessive pronouns, and reflexive pronouns correctly in conversation and writing'
+  },
+  {
+    id: 'parts-of-speech-verbs',
+    title: 'Parts of Speech — Verbs',
+    level: 'Beginner–Intermediate',
+    description: 'Recognizing action and state verbs, using helping verbs, and choosing correct verb forms in sentence context'
+  },
+  {
+    id: 'parts-of-speech-adjectives',
+    title: 'Parts of Speech — Adjectives',
+    level: 'Beginner–Elementary',
+    description: 'Describing people, places, and things with adjectives, including adjective order and common comparative forms'
+  },
+  {
+    id: 'parts-of-speech-adverbs',
+    title: 'Parts of Speech — Adverbs',
+    level: 'Elementary–Intermediate',
+    description: 'Using adverbs of frequency, manner, time, and degree to add detail and improve clarity in sentences'
+  },
+  {
+    id: 'parts-of-speech-prepositions',
+    title: 'Parts of Speech — Prepositions',
+    level: 'Elementary',
+    description: 'Choosing correct prepositions of place, time, and movement such as in, on, at, to, from, and through'
+  },
+  {
+    id: 'parts-of-speech-conjunctions',
+    title: 'Parts of Speech — Conjunctions',
+    level: 'Elementary–Intermediate',
+    description: 'Joining ideas with coordinating and subordinating conjunctions like and, but, so, because, although, and while'
+  },
+  {
+    id: 'parts-of-speech-interjections',
+    title: 'Parts of Speech — Interjections',
+    level: 'Beginner–Elementary',
+    description: 'Understanding interjections such as wow, oh, and sorry, and using them naturally and appropriately in spoken English'
+  },
+  {
+    id: 'sentence-formation-basics',
+    title: 'Sentence Formation — Basics',
+    level: 'Beginner–Elementary',
+    description: 'Building clear sentences using correct word order (subject + verb + object), punctuation, and capitalization'
+  },
+  {
+    id: 'sentence-formation-complex',
+    title: 'Sentence Formation — Complex Sentences',
+    level: 'Elementary–Intermediate',
+    description: 'Combining clauses to form compound and complex sentences with correct connectors and punctuation'
   }
 ];
 
