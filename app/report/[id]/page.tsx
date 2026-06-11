@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import type { EvaluationReport, SpeakingSession } from '@/lib/ielts/types';
+import ReportCard from '@/components/ReportCard';
 
 function fallbackReport(): EvaluationReport {
   return {
@@ -68,28 +69,14 @@ export default function ReportPage() {
       <section className="card">
         <h2>Criteria Breakdown</h2>
         <div className="criteria-grid">
-          <div className="criteria-item">
-            <h3>Fluency & Coherence</h3>
-            <p>Band: {report.criteria.fluencyCoherence.band.toFixed(1)}</p>
-            <p>{report.criteria.fluencyCoherence.evidence[0]}</p>
-          </div>
-          <div className="criteria-item">
-            <h3>Lexical Resource</h3>
-            <p>Band: {report.criteria.lexicalResource.band.toFixed(1)}</p>
-            <p>{report.criteria.lexicalResource.evidence[0]}</p>
-          </div>
-          <div className="criteria-item">
-            <h3>Grammar Range & Accuracy</h3>
-            <p>Band: {report.criteria.grammaticalRange.band.toFixed(1)}</p>
-            <p>{report.criteria.grammaticalRange.evidence[0]}</p>
-          </div>
-          <div className="criteria-item">
-            <h3>Pronunciation</h3>
-            <p>
-              Band: {report.criteria.pronunciation.band.toFixed(1)} ({report.criteria.pronunciation.confidence} confidence)
-            </p>
-            <p>{report.criteria.pronunciation.evidence[0]}</p>
-          </div>
+          <ReportCard title="Fluency & Coherence" criterion={report.criteria.fluencyCoherence} />
+          <ReportCard title="Lexical Resource" criterion={report.criteria.lexicalResource} />
+          <ReportCard title="Grammar Range & Accuracy" criterion={report.criteria.grammaticalRange} />
+          <ReportCard
+            title="Pronunciation"
+            criterion={report.criteria.pronunciation}
+            extra={`${report.criteria.pronunciation.confidence} confidence`}
+          />
         </div>
       </section>
 

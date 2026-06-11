@@ -1,5 +1,7 @@
 export type SessionStatus = 'created' | 'live' | 'ended' | 'evaluated';
 
+export type SpeakingPart = 'part1' | 'part2' | 'part3';
+
 export type TranscriptEntry = {
   role: 'examiner' | 'student';
   text: string;
@@ -34,6 +36,7 @@ export type SpeakingSession = {
   githubUsername?: string;
   profileSummary?: string;
   status: SessionStatus;
+  part?: SpeakingPart;
   transcript?: TranscriptEntry[];
   report?: EvaluationReport;
   durationSec?: number;
