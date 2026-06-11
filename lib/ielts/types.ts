@@ -1,0 +1,40 @@
+export type SessionStatus = 'created' | 'live' | 'ended' | 'evaluated';
+
+export type TranscriptEntry = {
+  role: 'examiner' | 'student';
+  text: string;
+  ts: number;
+};
+
+export type EvaluationCriterion = {
+  band: number;
+  evidence: string[];
+  tips: string[];
+};
+
+export type EvaluationReport = {
+  overallBand: number;
+  criteria: {
+    fluencyCoherence: EvaluationCriterion;
+    lexicalResource: EvaluationCriterion;
+    grammaticalRange: EvaluationCriterion;
+    pronunciation: EvaluationCriterion & { confidence: 'low' | 'medium' };
+  };
+  errorLog: Array<{ studentSaid: string; correction: string; rule: string }>;
+  gapToTarget: string;
+  nextSessionFocus: string[];
+};
+
+export type SpeakingSession = {
+  id: string;
+  createdAt: string;
+  targetScore: string;
+  background: string;
+  interests: string;
+  githubUsername?: string;
+  profileSummary?: string;
+  status: SessionStatus;
+  transcript?: TranscriptEntry[];
+  report?: EvaluationReport;
+  durationSec?: number;
+};
