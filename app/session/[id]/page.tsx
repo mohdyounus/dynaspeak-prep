@@ -7,7 +7,7 @@ import MicButton from '@/components/MicButton';
 import Waveform from '@/components/Waveform';
 import LiveCaptions from '@/components/LiveCaptions';
 import CueCard from '@/components/CueCard';
-import { MockVoiceSession } from '@/lib/realtime';
+import { BrowserVoiceSession, MockVoiceSession, VoiceSession } from '@/lib/realtime';
 import { getSilenceThreshold } from '@/lib/turnDetection';
 
 const SAMPLE_TRANSCRIPT: TranscriptEntry[] = [
@@ -28,8 +28,11 @@ export default function SessionPage() {
   const [localTranscript, setLocalTranscript] = useState<TranscriptEntry[]>([]);
   const [part, setPart] = useState<SpeakingPart>('part1');
   const [micEnabled, setMicEnabled] = useState(false);
+  const [voiceMode, setVoiceMode] = useState<'browser' | 'mock'>('browser');
 
-  const voiceRef = useRef<MockVoiceSession | null>(null);
+  const voiceRef = useRef<VoiceSession | null>(null);
+  const greetedRef = useRef(false);
+  const cueCompleteRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -61,9 +64,30 @@ export default function SessionPage() {
   useEffect(() => {
     if (!session) return;
     if (!voiceRef.current) {
-      const voice = new MockVoiceSession();
+      let voice: VoiceSession;
+      try {
+        voice = new BrowserVoiceSession();
+        setVoiceMode('browser');
+      } catch {
+        voice = new MockVoiceSession();
+        setVoiceMode('mock');
+      }
       voice.onTranscript((entry) => {
         setLocalTranscript((prev) => [...prev, entry]);
+
+        if (entry.role === 'student') {
+          const normalized = entry.text.toLowerCase();
+          if (
+            normalized.includes("i'm done")
+            || normalized.includes('end interview')
+            || normalized.includes('goodbye')
+          ) {
+            endSession();
+            return;
+          }
+
+          void respondToStudent(entry.text);
+        }
       });
       voice.onStateChange((next) => {
         if (next !== 'ended') {
@@ -74,12 +98,84 @@ export default function SessionPage() {
     }
   }, [session]);
 
+  useEffect(() => {
+    if (!micEnabled || !voiceRef.current || greetedRef.current) return;
+    greetedRef.current = true;
+    void voiceRef.current.speak('Welcome to your IELTS speaking practice. Let us begin with Part 1. Could you introduce yourself?');
+  }, [micEnabled]);
+
+  async function respondToStudent(answer: string) {
+    if (!voiceRef.current) return;
+
+    if (part === 'part1') {
+      const questions = [
+        'Thank you. What kind of work or study do you do at the moment?',
+        'How often do you use English in your daily life?'
+      ];
+      const studentTurns = transcript.filter((t) => t.role === 'student').length;
+      if (studentTurns >= 3) {
+        setPart('part2');
+        cueCompleteRef.current = false;
+        await voiceRef.current.speak('Now we will move to Part 2. Please read the cue card, prepare for one minute, then speak for one to two minutes.');
+        return;
+      }
+      await voiceRef.current.speak(questions[Math.min(studentTurns - 1, questions.length - 1)] || 'Could you expand that with an example?');
+      return;
+    }
+
+    if (part === 'part2') {
+      if (!cueCompleteRef.current) {
+        cueCompleteRef.current = true;
+        await voiceRef.current.speak('Thank you for your long turn. I have one follow-up question: what was the most difficult part for you?');
+        return;
+      }
+
+      setPart('part3');
+      await voiceRef.current.speak('Great. We are now in Part 3. Do you think technology has made communication better or worse in society?');
+      return;
+    }
+
+    const followUps = [
+      'That is an interesting point. Could you compare this with the past? ',
+      'What changes do you predict in the next ten years?',
+      'Thank you. We can finish here when you are ready. You can say I am done.'
+    ];
+    const part3StudentTurns = transcript.filter((t) => t.role === 'student').length;
+    await voiceRef.current.speak(followUps[Math.min(part3StudentTurns - 1, followUps.length - 1)] || 'Please continue with one clear example.');
+    void answer;
+  }
+
   async function toggleMic() {
     if (!voiceRef.current) return;
 
     if (!micEnabled) {
+      setError('');
       setMicEnabled(true);
-      await voiceRef.current.start('IELTS speaking mock prompt.');
+      try {
+        await voiceRef.current.start('IELTS speaking live prompt.');
+      } catch {
+        setError('Browser speech recognition is not available, switching to mock mode.');
+        const fallback = new MockVoiceSession();
+        fallback.onTranscript((entry) => {
+          setLocalTranscript((prev) => [...prev, entry]);
+          if (entry.role === 'student') {
+            const normalized = entry.text.toLowerCase();
+            if (normalized.includes("i'm done") || normalized.includes('end interview') || normalized.includes('goodbye')) {
+              endSession();
+              return;
+            }
+            void respondToStudent(entry.text);
+          }
+        });
+        fallback.onStateChange((next) => {
+          if (next !== 'ended') {
+            setState(next as 'listening' | 'speaking' | 'thinking');
+          }
+        });
+        voiceRef.current = fallback;
+        setVoiceMode('mock');
+        await fallback.start('IELTS speaking mock prompt.');
+      }
       return;
     }
 
@@ -140,6 +236,7 @@ export default function SessionPage() {
         <h1>Live Speaking Session</h1>
         <p className="speaking-muted">Session ID: {sessionId}</p>
         <p className="speaking-muted">Target: {session?.targetScore || '6.5'} | Status: {session?.status || 'loading'}</p>
+        <p className="speaking-muted">Voice mode: {voiceMode === 'browser' ? 'Browser Speech (live)' : 'Mock fallback'}</p>
         <p className="part-chip">{partLabel(part)}</p>
         <p className="speaking-muted">Turn detection: {getSilenceThreshold(part === 'part2' ? 'monologue' : 'normal')}ms silence threshold</p>
 

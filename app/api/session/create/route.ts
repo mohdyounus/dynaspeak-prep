@@ -43,7 +43,8 @@ export async function POST(req: Request) {
     background,
     interests,
     githubUsername: githubUsername || undefined,
-    profileSummary: profileSummary || undefined
+    profileSummary: profileSummary || undefined,
+    part: 'part1'
   });
 
   const examinerPrompt = buildExaminerPrompt({
@@ -52,13 +53,15 @@ export async function POST(req: Request) {
     technicalInterests: interests
   });
 
+  const realtimeEnabled = Boolean(process.env.OPENAI_API_KEY);
+
   return NextResponse.json({
     sessionId: session.id,
     session,
     voice: {
       provider: 'openai-realtime',
-      enabled: false,
-      reason: 'Token minting not yet implemented in M1 scaffold.'
+      enabled: realtimeEnabled,
+      reason: realtimeEnabled ? undefined : 'OPENAI_API_KEY is not configured for realtime tokens.'
     },
     examinerPrompt
   });

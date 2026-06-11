@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { SpeakingSession } from '@/lib/ielts/types';
+import type { SpeakingPart, SpeakingSession } from '@/lib/ielts/types';
 
 const dataDir = path.join(process.cwd(), '.data');
 const sessionsFile = path.join(dataDir, 'speaking-sessions.json');
@@ -37,6 +37,7 @@ export function createSession(input: {
   interests: string;
   githubUsername?: string;
   profileSummary?: string;
+  part?: SpeakingPart;
 }): SpeakingSession {
   const sessions = readAll();
   const session: SpeakingSession = {
@@ -47,6 +48,7 @@ export function createSession(input: {
     interests: input.interests,
     githubUsername: input.githubUsername,
     profileSummary: input.profileSummary,
+    part: input.part,
     status: 'created'
   };
   sessions.unshift(session);
