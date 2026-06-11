@@ -154,6 +154,6 @@ My goal for this year is to complete Level 2 English and then look for a job. I 
 
 ---
 
-➡️ **Next lesson:** [Lesson 10 — Writing structure](10-writing-structure.html)  
-⬅️ **Previous lesson:** [Lesson 8 — Speaking questions](08-speaking-questions.html)  
-🏠 [Back to home](../index.html)
+➡️ **Next lesson:** [Lesson 10 — Writing structure](/lessons/10-writing-structure)  
+⬅️ **Previous lesson:** [Lesson 8 — Speaking questions](/lessons/08-speaking-questions)  
+🏠 [Back to home](/)

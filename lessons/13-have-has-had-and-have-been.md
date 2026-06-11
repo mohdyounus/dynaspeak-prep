@@ -109,5 +109,5 @@ Choose the correct answer:
 
 ---
 
-Next: [Lesson 14 - Be, Being, Been, Do, Did, Done](14-be-being-been-do-did-done.html)  
-Home: [Back to home](../index.html)
+Next: [Lesson 14 - Be, Being, Been, Do, Did, Done](/lessons/14-be-being-been-do-did-done)  
+Home: [Back to home](/)

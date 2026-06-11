@@ -146,6 +146,6 @@ Write a short introduction about yourself (5–8 sentences). Use the sentence st
 
 ---
 
-➡️ **Next lesson:** [Lesson 8 — Speaking: common test questions](08-speaking-questions.html)  
-⬅️ **Previous lesson:** [Lesson 6 — Vocabulary](06-vocabulary.html)  
-🏠 [Back to home](../index.html)
+➡️ **Next lesson:** [Lesson 8 — Speaking: common test questions](/lessons/08-speaking-questions)  
+⬅️ **Previous lesson:** [Lesson 6 — Vocabulary](/lessons/06-vocabulary)  
+🏠 [Back to home](/)

@@ -206,5 +206,5 @@ nav_exclude: true
 
 ---
 
-Next: [AI Practice Quiz](ai-quiz.html)  
-Home: [Back to home](../index.html)
+Next: [AI Practice Quiz](/quizzes/ai-quiz)  
+Home: [Back to home](/)

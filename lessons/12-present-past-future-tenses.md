@@ -134,5 +134,5 @@ Fill in the correct form:
 
 ---
 
-Next: [Lesson 13 - Have, Has, Had, and Have Been](13-have-has-had-and-have-been.html)  
-Home: [Back to home](../index.html)
+Next: [Lesson 13 - Have, Has, Had, and Have Been](/lessons/13-have-has-had-and-have-been)  
+Home: [Back to home](/)

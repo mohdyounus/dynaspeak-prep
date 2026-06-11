@@ -181,6 +181,6 @@ Fill in the gaps with the correct form of the verb:
 
 ---
 
-➡️ **Next lesson:** [Lesson 3 — Present continuous tense](03-present-continuous.html)  
-⬅️ **Previous lesson:** [Lesson 1 — Verb to be](01-verb-to-be.html)  
-🏠 [Back to home](../index.html)
+➡️ **Next lesson:** [Lesson 3 — Present continuous tense](/lessons/03-present-continuous)  
+⬅️ **Previous lesson:** [Lesson 1 — Verb to be](/lessons/01-verb-to-be)  
+🏠 [Back to home](/)

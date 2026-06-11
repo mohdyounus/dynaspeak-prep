@@ -188,6 +188,6 @@ nav_exclude: true
 
 ---
 
-➡️ **Next quiz:** [Quiz 3 — Reading](quiz-reading.html)  
-⬅️ **Previous quiz:** [Quiz 1 — Grammar](quiz-grammar.html)  
-🏠 [Back to home](../index.html)
+➡️ **Next quiz:** [Quiz 3 — Reading](/quizzes/quiz-reading)  
+⬅️ **Previous quiz:** [Quiz 1 — Grammar](/quizzes/quiz-grammar)  
+🏠 [Back to home](/)

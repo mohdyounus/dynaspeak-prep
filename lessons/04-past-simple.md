@@ -171,6 +171,6 @@ Write the correct past tense form:
 
 ---
 
-➡️ **Next lesson:** [Lesson 5 — Articles: a, an, the](05-articles.html)  
-⬅️ **Previous lesson:** [Lesson 3 — Present continuous](03-present-continuous.html)  
-🏠 [Back to home](../index.html)
+➡️ **Next lesson:** [Lesson 5 — Articles: a, an, the](/lessons/05-articles)  
+⬅️ **Previous lesson:** [Lesson 3 — Present continuous](/lessons/03-present-continuous)  
+🏠 [Back to home](/)

@@ -254,5 +254,5 @@ nav_exclude: true
 
 ---
 
-➡️ **Next quiz:** [Quiz 2 — Vocabulary](quiz-vocabulary.html)  
-🏠 [Back to home](../index.html)
+➡️ **Next quiz:** [Quiz 2 — Vocabulary](/quizzes/quiz-vocabulary)  
+🏠 [Back to home](/)

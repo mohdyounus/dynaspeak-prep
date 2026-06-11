@@ -149,5 +149,5 @@ Choose the correct form:
 
 ---
 
-Next: [Lesson 12 - Present, Past, and Future Tenses](12-present-past-future-tenses.html)  
-Home: [Back to home](../index.html)
+Next: [Lesson 12 - Present, Past, and Future Tenses](/lessons/12-present-past-future-tenses)  
+Home: [Back to home](/)

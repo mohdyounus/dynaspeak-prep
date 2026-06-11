@@ -131,5 +131,5 @@ Fill in the gaps with **being**, **been**, **did**, or **done**:
 
 ---
 
-Next: [Quiz - Verb Forms and Tenses](../quizzes/quiz-verb-forms.html)  
-Home: [Back to home](../index.html)
+Next: [Quiz - Verb Forms and Tenses](/quizzes/quiz-verb-forms)  
+Home: [Back to home](/)

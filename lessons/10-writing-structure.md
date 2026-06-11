@@ -156,13 +156,13 @@ You have completed all 10 lessons. Now it's time to test your knowledge.
 
 | Next step | Link |
 |-----------|------|
-| Grammar quiz | [Quiz 1](../quizzes/quiz-grammar.html) |
-| Vocabulary quiz | [Quiz 2](../quizzes/quiz-vocabulary.html) |
-| Reading quiz | [Quiz 3](../quizzes/quiz-reading.html) |
-| Writing quiz | [Quiz 4](../quizzes/quiz-writing.html) |
-| Final mock test | [Mock test](../quizzes/mock-test.html) |
+| Grammar quiz | [Quiz 1](/quizzes/quiz-grammar) |
+| Vocabulary quiz | [Quiz 2](/quizzes/quiz-vocabulary) |
+| Reading quiz | [Quiz 3](/quizzes/quiz-reading) |
+| Writing quiz | [Quiz 4](/quizzes/quiz-writing) |
+| Final mock test | [Mock test](/quizzes/mock-test) |
 
 ---
 
-⬅️ **Previous lesson:** [Lesson 9 — Reading strategies](09-reading-strategies.html)  
-🏠 [Back to home](../index.html)
+⬅️ **Previous lesson:** [Lesson 9 — Reading strategies](/lessons/09-reading-strategies)  
+🏠 [Back to home](/)

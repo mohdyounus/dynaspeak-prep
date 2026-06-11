@@ -170,6 +170,6 @@ Choose the best word to complete each sentence:
 
 ---
 
-➡️ **Next lesson:** [Lesson 7 — Speaking: introduction](07-speaking-intro.html)  
-⬅️ **Previous lesson:** [Lesson 5 — Articles](05-articles.html)  
-🏠 [Back to home](../index.html)
+➡️ **Next lesson:** [Lesson 7 — Speaking: introduction](/lessons/07-speaking-intro)  
+⬅️ **Previous lesson:** [Lesson 5 — Articles](/lessons/05-articles)  
+🏠 [Back to home](/)

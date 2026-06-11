@@ -223,6 +223,6 @@ Read the following letter and answer questions 9–15.
 
 ---
 
-➡️ **Next quiz:** [Quiz 4 — Writing](quiz-writing.html)  
-⬅️ **Previous quiz:** [Quiz 2 — Vocabulary](quiz-vocabulary.html)  
-🏠 [Back to home](../index.html)
+➡️ **Next quiz:** [Quiz 4 — Writing](/quizzes/quiz-writing)  
+⬅️ **Previous quiz:** [Quiz 2 — Vocabulary](/quizzes/quiz-vocabulary)  
+🏠 [Back to home](/)
