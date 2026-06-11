@@ -65,6 +65,30 @@ const TOPICS = [
     description: 'Writing clear paragraphs with a topic sentence, supporting details, and a concluding sentence — using linking words (first, then, finally, because, however)'
   },
   {
+    id: 'verb-forms-overview',
+    title: 'Lesson 11 — Verb Forms Overview',
+    level: 'Beginner–Elementary',
+    description: 'Understanding base forms, past simple, past participles, and -ing forms, including key verb families such as be, do, and have'
+  },
+  {
+    id: 'present-past-future-tenses',
+    title: 'Lesson 12 — Present, Past, and Future Tenses',
+    level: 'Beginner–Elementary',
+    description: 'Choosing the correct tense for now, before now, and later using present, past, and future forms with common time markers'
+  },
+  {
+    id: 'have-has-had-have-been',
+    title: 'Lesson 13 — Have, Has, Had, and Have Been',
+    level: 'Elementary',
+    description: 'Using have, has, and had for possession and perfect tenses, plus forms like have been, has been, and had been'
+  },
+  {
+    id: 'be-being-been-do-did-done',
+    title: 'Lesson 14 — Be, Being, Been, Do, Did, Done',
+    level: 'Elementary',
+    description: 'Practising common verb families and choosing correctly between being and been, and between did and done'
+  },
+  {
     id: 'parts-of-speech-nouns',
     title: 'Parts of Speech — Nouns',
     level: 'Beginner–Elementary',
