@@ -33,6 +33,7 @@ export default function ReportPage() {
   const [session, setSession] = useState<SpeakingSession | null>(null);
   const [error, setError] = useState('');
   const [evaluating, setEvaluating] = useState(false);
+  const [evaluationAttempted, setEvaluationAttempted] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -61,9 +62,11 @@ export default function ReportPage() {
     if (session.report) return;
     if (session.status !== 'ended') return;
     if (evaluating) return;
+    if (evaluationAttempted) return;
 
     const runEvaluate = async () => {
       setEvaluating(true);
+      setEvaluationAttempted(true);
       setError('');
       try {
         const res = await fetch('/api/evaluate', {
@@ -87,7 +90,7 @@ export default function ReportPage() {
     };
 
     void runEvaluate();
-  }, [evaluating, session, sessionId]);
+  }, [evaluationAttempted, evaluating, session, sessionId]);
 
   const report = useMemo(() => session?.report || fallbackReport(), [session]);
   const practiceAgainHref = useMemo(() => {
