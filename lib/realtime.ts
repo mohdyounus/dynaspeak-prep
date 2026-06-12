@@ -40,6 +40,8 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   private turnMode: TurnMode = 'normal';
   private started = false;
   private closed = false;
+  private state: VoiceState = 'thinking';
+  private bargeInCancelling = false;
   private pendingToolCalls: Map<string, ToolCall> = new Map();
 
   constructor(private readonly tokenEndpoint = '/api/session/token') {}
@@ -290,6 +292,16 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
 
       if (!event?.type) return;
 
+      if (event.type === 'input_audio_buffer.speech_started') {
+        // If the learner starts speaking while assistant audio is active, cancel current output once.
+        if (this.state === 'speaking' && !this.bargeInCancelling) {
+          this.bargeInCancelling = true;
+          this.sendEvent({ type: 'response.cancel' });
+        }
+        this.emitState('listening');
+        return;
+      }
+
       // Handle function/tool calls
       if (event.type === 'response.function_call_arguments.done' && event.item) {
         const { call_id, name, arguments: argsStr } = event.item;
@@ -320,6 +332,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
         if (examinerText) {
           this.pushTranscript({ role: 'examiner', text: examinerText, ts: Date.now() });
         }
+        this.bargeInCancelling = false;
         this.emitState('listening');
         return;
       }
@@ -334,6 +347,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
       }
 
       if (event.type === 'response.completed') {
+        this.bargeInCancelling = false;
         this.emitState('listening');
       }
     } catch {
@@ -347,6 +361,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   }
 
   private emitState(state: VoiceState) {
+    this.state = state;
     this.stateHandlers.forEach((h) => h(state));
   }
 }
