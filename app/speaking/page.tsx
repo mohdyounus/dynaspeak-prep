@@ -10,6 +10,7 @@ function SpeakingSetupContent() {
   const [githubUsername, setGithubUsername] = useState('');
   const [profileSummary, setProfileSummary] = useState('');
   const [focusInput, setFocusInput] = useState('');
+  const [startPart, setStartPart] = useState<'part1' | 'part2' | 'part3'>('part1');
   const [attemptNo, setAttemptNo] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -69,7 +70,7 @@ function SpeakingSetupContent() {
         return;
       }
 
-      router.push(`/session/${data.sessionId}`);
+      router.push(`/session/${data.sessionId}?startPart=${startPart}`);
     } catch {
       setError('Network error while creating session.');
     } finally {
@@ -124,6 +125,27 @@ function SpeakingSetupContent() {
             placeholder="e.g. Part 2 fluency, tense consistency, vocabulary precision"
           />
         </label>
+
+        <fieldset className="part-fieldset">
+          <legend>Start at</legend>
+          <div className="part-selector">
+            {([
+              { value: 'part1', label: 'Part 1', sub: 'Warm-up questions' },
+              { value: 'part2', label: 'Part 2', sub: 'Long turn / Cue card' },
+              { value: 'part3', label: 'Part 3', sub: 'Discussion' }
+            ] as const).map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                className={`part-select-btn${startPart === p.value ? ' active' : ''}`}
+                onClick={() => setStartPart(p.value)}
+              >
+                <strong>{p.label}</strong>
+                <span>{p.sub}</span>
+              </button>
+            ))}
+          </div>
+        </fieldset>
 
         <button type="submit" disabled={loading}>
           {loading ? 'Creating Session...' : 'Start Interview'}

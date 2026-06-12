@@ -1,38 +1,38 @@
 'use client';
+// ── SESSION PAGE — PTT (push-to-talk) mode ──────────────────────────────────
+// Student clicks "Start Answer" to open mic, "End Answer" to close it.
+// Claude evaluation runs automatically after each answer is submitted.
+// ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import type { SpeakingPart, SpeakingSession, TranscriptEntry } from '@/lib/ielts/types';
-import MicButton from '@/components/MicButton';
-import Waveform from '@/components/Waveform';
 import LiveCaptions from '@/components/LiveCaptions';
 import CueCard from '@/components/CueCard';
 import { BrowserVoiceSession, MockVoiceSession, OpenAIRealtimeVoiceSession, VoiceSession } from '@/lib/realtime';
-import { getSilenceThreshold } from '@/lib/turnDetection';
 
-const SAMPLE_TRANSCRIPT: TranscriptEntry[] = [
-  { role: 'examiner', text: 'Welcome. Could you tell me your full name, please?', ts: Date.now() - 60000 },
-  { role: 'student', text: 'My name is Alex. I am preparing for IELTS speaking.', ts: Date.now() - 50000 },
-  { role: 'examiner', text: 'Great. Let us begin with Part 1. What kind of work do you do?', ts: Date.now() - 40000 }
-];
+type AnswerState = 'idle' | 'connected' | 'ready_to_answer' | 'recording' | 'evaluating';
 
-export default function SessionPage() {
+function SessionContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const sessionId = params?.id;
 
   const [session, setSession] = useState<SpeakingSession | null>(null);
-  const [state, setState] = useState<'listening' | 'speaking' | 'thinking'>('listening');
+  const [voiceState, setVoiceState] = useState<'listening' | 'speaking' | 'thinking'>('listening');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [localTranscript, setLocalTranscript] = useState<TranscriptEntry[]>([]);
   const [part, setPart] = useState<SpeakingPart>('part1');
-  const [micEnabled, setMicEnabled] = useState(false);
+  const [sessionActive, setSessionActive] = useState(false);
   const [voiceMode, setVoiceMode] = useState<'realtime' | 'browser' | 'mock'>('realtime');
   const [elapsedSec, setElapsedSec] = useState(0);
   const [autoEnding, setAutoEnding] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [turnEvaluating, setTurnEvaluating] = useState(false);
+  const [answerState, setAnswerStateRaw] = useState<AnswerState>('idle');
+  const [currentQuestion, setCurrentQuestion] = useState('');
 
   const voiceRef = useRef<VoiceSession | null>(null);
   const greetedRef = useRef(false);
@@ -42,6 +42,19 @@ export default function SessionPage() {
   const reconnectAttemptedRef = useRef(false);
   const voiceStartedRef = useRef(false);
   const studentSilenceTimerRef = useRef<number | null>(null);
+  const answerStateRef = useRef<AnswerState>('idle');
+  const pendingTextRef = useRef<string[]>([]);
+  const partRef = useRef<SpeakingPart>('part1');
+
+  function updateAnswerState(next: AnswerState) {
+    answerStateRef.current = next;
+    setAnswerStateRaw(next);
+  }
+
+  // Keep partRef in sync for stale-closure-safe access
+  useEffect(() => {
+    partRef.current = part;
+  }, [part]);
 
   useEffect(() => {
     let active = true;
@@ -67,7 +80,7 @@ export default function SessionPage() {
   const transcript = useMemo(() => {
     if (localTranscript.length) return localTranscript;
     if (session?.transcript?.length) return session.transcript;
-    return SAMPLE_TRANSCRIPT;
+    return [];
   }, [localTranscript, session]);
 
   const effectiveExaminerPrompt = useMemo(() => {
@@ -84,27 +97,35 @@ export default function SessionPage() {
     voice.onTranscript((entry) => {
       setLocalTranscript((prev) => [...prev, entry]);
 
-      if (entry.role === 'student') {
-        if (studentSilenceTimerRef.current) {
-          window.clearTimeout(studentSilenceTimerRef.current);
-          studentSilenceTimerRef.current = null;
+      if (entry.role === 'examiner') {
+        // Show latest examiner message as the current question
+        setCurrentQuestion(entry.text);
+        // Transition to ready_to_answer after connecting or after evaluating
+        if (answerStateRef.current === 'connected' || answerStateRef.current === 'evaluating') {
+          updateAnswerState('ready_to_answer');
         }
+        return;
+      }
+
+      if (entry.role === 'student') {
+        // Only accumulate text during explicit PTT recording phase
+        if (answerStateRef.current === 'recording') {
+          pendingTextRef.current.push(entry.text);
+        }
+        // Voice commands to end session always work
         const normalized = entry.text.toLowerCase();
         if (
-          normalized.includes("i'm done")
-          || normalized.includes('end interview')
-          || normalized.includes('goodbye')
+          normalized.includes("i'm done") ||
+          normalized.includes('end interview') ||
+          normalized.includes('goodbye')
         ) {
           endSession();
-          return;
         }
-
-        void respondToStudent(entry.text);
       }
     });
     voice.onStateChange((next) => {
       if (next !== 'ended') {
-        setState(next as 'listening' | 'speaking' | 'thinking');
+        setVoiceState(next as 'listening' | 'speaking' | 'thinking');
       }
     });
     voice.onToolCall(async (tool) => {
@@ -133,6 +154,14 @@ export default function SessionPage() {
     if (!session) return;
     if (session.part) {
       setPart(session.part);
+      partRef.current = session.part;
+    } else {
+      // Read startPart from URL query param set by the setup page
+      const sp = searchParams?.get('startPart') as SpeakingPart | null;
+      if (sp && (['part1', 'part2', 'part3'] as string[]).includes(sp)) {
+        setPart(sp);
+        partRef.current = sp;
+      }
     }
     if (!voiceRef.current) {
       let voice: VoiceSession | null = null;
@@ -159,12 +188,13 @@ export default function SessionPage() {
     }
   }, [session]);
 
+  // Auto-reconnect on unexpected realtime drop
   useEffect(() => {
-    if (!micEnabled) return;
+    if (!sessionActive) return;
     if (busy) return;
     if (voiceMode !== 'realtime') return;
     if (reconnecting) return;
-    if (state !== 'thinking') return;
+    if (voiceState !== 'thinking') return;
     if (!sessionId) return;
     if (!voiceStartedRef.current) return;
     if (endingRef.current) return;
@@ -177,16 +207,16 @@ export default function SessionPage() {
 
     reconnectAttemptedRef.current = true;
     setReconnecting(true);
-    setError('Realtime connection dropped. Attempting one reconnect...');
+    setError('Realtime connection dropped. Attempting one reconnect…');
 
     const reconnect = async () => {
       try {
         const nextVoice = new OpenAIRealtimeVoiceSession('/api/session/token');
         attachVoiceHandlers(nextVoice);
         voiceRef.current = nextVoice;
-            await nextVoice.start(effectiveExaminerPrompt);
-        await nextVoice.setTurnMode(part === 'part2' ? 'monologue' : 'normal');
-        await nextVoice.speak('We are back online. Please continue your answer.');
+        await nextVoice.start(effectiveExaminerPrompt);
+        await nextVoice.setTurnMode(partRef.current === 'part2' ? 'monologue' : 'normal');
+        await nextVoice.speak('We are back online. Please continue where you left off.');
         setError('');
       } catch {
         setError('Reconnect failed. Ending session and saving partial transcript.');
@@ -197,30 +227,26 @@ export default function SessionPage() {
     };
 
     void reconnect();
-  }, [busy, effectiveExaminerPrompt, micEnabled, part, reconnecting, sessionId, state, voiceMode]);
+  }, [busy, effectiveExaminerPrompt, sessionActive, part, reconnecting, sessionId, voiceState, voiceMode]);
 
+  // Session timer with 18-min hard cap
   useEffect(() => {
     if (!sessionId) return;
-    if (!micEnabled) return;
-
+    if (!sessionActive) return;
     if (startedAtRef.current === null) {
       startedAtRef.current = Date.now();
     }
-
     const timer = setInterval(() => {
       if (!startedAtRef.current) return;
       const next = Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000));
       setElapsedSec(next);
-
-      // Hard cap at 18 minutes (1080 sec) to manage realtime cost and long sessions.
       if (next >= 1080 && !endingRef.current) {
         setAutoEnding(true);
         void endSession(true);
       }
     }, 1000);
-
     return () => clearInterval(timer);
-  }, [micEnabled, sessionId]);
+  }, [sessionActive, sessionId]);
 
   async function persistPart(nextPart: SpeakingPart) {
     if (!sessionId) return;
@@ -235,66 +261,105 @@ export default function SessionPage() {
     }
   }
 
+  // Opening greeting — fires once after session activates
   useEffect(() => {
-    if (!micEnabled || !voiceRef.current || greetedRef.current) return;
+    if (!sessionActive || !voiceRef.current || greetedRef.current) return;
     greetedRef.current = true;
-    void voiceRef.current.speak('Welcome to your IELTS speaking practice. Let us begin with Part 1. Could you introduce yourself?');
-  }, [micEnabled]);
+    updateAnswerState('connected');
 
-  async function respondToStudent(answer: string) {
+    const p = partRef.current;
+    let greeting: string;
+    if (p === 'part2') {
+      greeting = 'Welcome. We will start directly with Part 2. Here is your cue card topic. Please take one minute to prepare, then speak for one to two minutes.';
+      void voiceRef.current.setTurnMode('monologue');
+    } else if (p === 'part3') {
+      greeting = 'Welcome. We will jump straight to Part 3 discussion. Do you think technology has improved or harmed society overall? Please share your opinion with reasons.';
+    } else {
+      greeting = `Welcome to your IELTS speaking practice. Let us begin with Part 1. Could you tell me your full name and what you currently do for work or study?${focusHint ? ' ' + focusHint : ''}`;
+    }
+    void voiceRef.current.speak(greeting);
+  }, [sessionActive]);
+
+  // PTT: student starts recording their answer
+  async function startAnswer() {
     if (!voiceRef.current) return;
+    if (answerStateRef.current !== 'ready_to_answer') return;
+    pendingTextRef.current = [];
+    updateAnswerState('recording');
+    if (studentSilenceTimerRef.current) {
+      window.clearTimeout(studentSilenceTimerRef.current);
+      studentSilenceTimerRef.current = null;
+    }
+    await voiceRef.current.resumeListening();
+  }
 
-    setTurnEvaluating(true);
+  // PTT: student finishes recording — commit and evaluate
+  async function endAnswer() {
+    if (!voiceRef.current) return;
+    if (answerStateRef.current !== 'recording') return;
+    updateAnswerState('evaluating');
     await voiceRef.current.pauseListening();
+    await voiceRef.current.commitAnswer();
+    const answer = pendingTextRef.current.join(' ').trim();
+    if (answer) {
+      await processStudentAnswer(answer);
+    } else {
+      setCurrentQuestion('I did not catch that. Please click “Start Answer” and try again.');
+      updateAnswerState('ready_to_answer');
+    }
+  }
+
+  // Core answer processing: LLM evaluator then scripted fallback
+  async function processStudentAnswer(answer: string) {
+    setTurnEvaluating(true);
     const llmResult = await evaluateStudentTurn(answer);
     setTurnEvaluating(false);
+    if (llmResult) return; // evaluateStudentTurn handles state transition via onTranscript
 
-    await voiceRef.current.resumeListening();
-
-    if (llmResult) {
-      return;
-    }
-
-    if (part === 'part1') {
+    const p = partRef.current;
+    if (p === 'part1') {
+      const studentTurns = transcript.filter((t) => t.role === 'student').length;
+      if (studentTurns >= 3) {
+        setPart('part2');
+        partRef.current = 'part2';
+        void persistPart('part2');
+        await voiceRef.current?.setTurnMode('monologue');
+        cueCompleteRef.current = false;
+        await voiceRef.current?.speak('Now we will move to Part 2. Please read the cue card, prepare for one minute, then speak for one to two minutes.');
+        updateAnswerState('ready_to_answer');
+        return;
+      }
       const questions = [
         `Thank you. What kind of work or study do you do at the moment? ${focusHint}`,
         `How often do you use English in your daily life? ${focusHint}`
       ];
-      const studentTurns = transcript.filter((t) => t.role === 'student').length;
-      if (studentTurns >= 3) {
-        setPart('part2');
-        void persistPart('part2');
-        await voiceRef.current.setTurnMode('monologue');
-        cueCompleteRef.current = false;
-        await voiceRef.current.speak('Now we will move to Part 2. Please read the cue card, prepare for one minute, then speak for one to two minutes.');
-        return;
-      }
-      await voiceRef.current.speak(questions[Math.min(studentTurns - 1, questions.length - 1)] || 'Could you expand that with an example?');
+      await voiceRef.current?.speak(questions[Math.min(studentTurns - 1, questions.length - 1)] || 'Could you expand on that with an example?');
+      updateAnswerState('ready_to_answer');
       return;
     }
-
-    if (part === 'part2') {
+    if (p === 'part2') {
       if (!cueCompleteRef.current) {
         cueCompleteRef.current = true;
-        await voiceRef.current.speak('Thank you for your long turn. I have one follow-up question: what was the most difficult part for you?');
+        await voiceRef.current?.speak('Thank you for your long turn. What was the most challenging part for you?');
+        updateAnswerState('ready_to_answer');
         return;
       }
-
       setPart('part3');
+      partRef.current = 'part3';
       void persistPart('part3');
-      await voiceRef.current.setTurnMode('normal');
-      await voiceRef.current.speak('Great. We are now in Part 3. Do you think technology has made communication better or worse in society?');
+      await voiceRef.current?.setTurnMode('normal');
+      await voiceRef.current?.speak('Great. We are now in Part 3. Do you think technology has made communication better or worse in society?');
+      updateAnswerState('ready_to_answer');
       return;
     }
-
+    const part3Turns = transcript.filter((t) => t.role === 'student').length;
     const followUps = [
-      `That is an interesting point. Could you compare this with the past? ${focusHint}`,
+      `That is interesting. Could you compare this with the past? ${focusHint}`,
       `What changes do you predict in the next ten years? ${focusHint}`,
-      'Thank you. We can finish here when you are ready. You can say I am done.'
+      'Thank you. We can finish whenever you are ready. You can say “I am done”.'
     ];
-    const part3StudentTurns = transcript.filter((t) => t.role === 'student').length;
-    await voiceRef.current.speak(followUps[Math.min(part3StudentTurns - 1, followUps.length - 1)] || 'Please continue with one clear example.');
-    void answer;
+    await voiceRef.current?.speak(followUps[Math.min(part3Turns - 1, followUps.length - 1)] || 'Could you give a specific example?');
+    updateAnswerState('ready_to_answer');
   }
 
   async function evaluateStudentTurn(answer: string): Promise<boolean> {
@@ -363,37 +428,28 @@ Focus hint: ${focusHint || 'none'}`
       if (nextQuestionLine) {
         setLocalTranscript((prev) => [...prev, { role: 'examiner', text: nextQuestionLine, ts: Date.now() }]);
         await voiceRef.current?.speak(nextQuestionLine);
+        setCurrentQuestion(nextQuestionLine);
+        updateAnswerState('ready_to_answer');
       }
-
-      if (studentSilenceTimerRef.current) {
-        window.clearTimeout(studentSilenceTimerRef.current);
-      }
-      studentSilenceTimerRef.current = window.setTimeout(() => {
-        if (!micEnabled || endingRef.current) return;
-        void voiceRef.current?.setTurnMode(part === 'part2' ? 'monologue' : 'normal');
-      }, part === 'part2' ? 2500 : 1000);
-
-      await voiceRef.current?.resumeListening();
 
       return true;
     } catch {
-      await voiceRef.current?.resumeListening();
       return false;
     }
   }
 
-  async function toggleMic() {
+  // Connect / disconnect the voice session
+  async function toggleSession() {
     if (!voiceRef.current) return;
 
-    if (!micEnabled) {
+    if (!sessionActive) {
       setError('');
-      setMicEnabled(true);
+      setSessionActive(true);
       reconnectAttemptedRef.current = false;
       try {
         await voiceRef.current.start(effectiveExaminerPrompt);
         voiceStartedRef.current = true;
       } catch {
-        // Realtime failed at runtime: try browser speech, then mock as last fallback.
         try {
           const browserFallback = new BrowserVoiceSession();
           attachVoiceHandlers(browserFallback);
@@ -414,15 +470,16 @@ Focus hint: ${focusHint || 'none'}`
       return;
     }
 
-    setMicEnabled(false);
+    setSessionActive(false);
     if (studentSilenceTimerRef.current) {
       window.clearTimeout(studentSilenceTimerRef.current);
       studentSilenceTimerRef.current = null;
     }
     const endedTranscript = await voiceRef.current.end();
     setLocalTranscript(endedTranscript);
-    setState('thinking');
+    setVoiceState('thinking');
     voiceStartedRef.current = false;
+    updateAnswerState('idle');
   }
 
   function partLabel(current: SpeakingPart): string {
@@ -437,7 +494,7 @@ Focus hint: ${focusHint || 'none'}`
     endingRef.current = true;
     setBusy(true);
     setError('');
-    setState('thinking');
+    setVoiceState('thinking');
 
     try {
       const capturedTranscript = voiceRef.current ? await voiceRef.current.end() : transcript;
@@ -471,10 +528,10 @@ Focus hint: ${focusHint || 'none'}`
 
       router.push(`/report/${sessionId}`);
     } catch {
-      setError(fromAutoCap ? 'Session reached the 18-minute cap, but network failed while ending. Please try End Interview again.' : 'Network error while ending session.');
+      setError(fromAutoCap ? 'Session reached the 18-minute cap, but network failed. Please try End Interview again.' : 'Network error while ending session.');
     } finally {
       setBusy(false);
-      setState('listening');
+      setVoiceState('listening');
       endingRef.current = false;
       setAutoEnding(false);
       setReconnecting(false);
@@ -488,83 +545,114 @@ Focus hint: ${focusHint || 'none'}`
     return `${m}:${s}`;
   }
 
+  const voiceStateLabel =
+    voiceState === 'speaking' ? '🔵 Examiner Speaking' : voiceState === 'thinking' ? '🟡 Thinking…' : '🟢 Listening';
+
   return (
     <div className="list-grid">
-      <section className="card speaking-header">
-        <h1>Live Speaking Session</h1>
-        <p className="speaking-muted">Session ID: {sessionId}</p>
-        <p className="speaking-muted">Target: {session?.targetScore || '6.5'} | Status: {session?.status || 'loading'}</p>
-        <p className="speaking-muted">
-          Voice mode: {voiceMode === 'realtime' ? 'OpenAI Realtime' : voiceMode === 'browser' ? 'Browser Speech (fallback)' : 'Mock fallback'}
-        </p>
-        <p className="speaking-muted">Session timer: {fmtDuration(elapsedSec)} / 18:00</p>
-        {turnEvaluating ? <p className="speaking-muted">Evaluating your last answer...</p> : null}
-        <p className="part-chip">{partLabel(part)}</p>
-        <p className="speaking-muted">Turn detection: {getSilenceThreshold(part === 'part2' ? 'monologue' : 'normal')}ms silence threshold</p>
-        {autoEnding ? <p className="speaking-error">Maximum session time reached. Ending interview automatically...</p> : null}
-        {reconnecting ? <p className="speaking-muted">Reconnecting realtime session...</p> : null}
-
-        <div className="speaking-toolbar">
-          <MicButton state={state} disabled={busy} onToggle={toggleMic} />
-          <Waveform active={state === 'speaking'} />
-          <div className={`speaking-state speaking-${state}`}>
-            {state === 'listening' ? 'Listening' : state === 'speaking' ? 'Examiner Speaking' : 'Thinking'}
-          </div>
+      {/* Compact info bar */}
+      <section className="card session-info-card">
+        <div className="session-info-bar">
+          <span className="part-chip">{partLabel(part)}</span>
+          <span className="speaking-muted">Target: {session?.targetScore || '6.5'}</span>
+          <span className="speaking-muted">⏱ {fmtDuration(elapsedSec)} / 18:00</span>
+          {sessionActive ? <span className={`speaking-state speaking-${voiceState}`}>{voiceStateLabel}</span> : null}
+          <span className="speaking-muted session-mode-badge">
+            {voiceMode === 'realtime' ? 'OpenAI Realtime' : voiceMode === 'browser' ? 'Browser Speech' : 'Mock'}
+          </span>
         </div>
-
-        <div className="speaking-actions">
-          <button type="button" onClick={() => setPart('part1')} disabled={busy}>
-            Part 1
-          </button>
-          <button type="button" onClick={() => setPart('part2')} disabled={busy}>
-            Part 2
-          </button>
-          <button type="button" onClick={() => setPart('part3')} disabled={busy}>
-            Part 3
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              void persistPart('part1');
-              setPart('part1');
-            }}
-            disabled={busy}
-          >
-            Save Part 1
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              void persistPart('part2');
-              setPart('part2');
-            }}
-            disabled={busy}
-          >
-            Save Part 2
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              void persistPart('part3');
-              setPart('part3');
-            }}
-            disabled={busy}
-          >
-            Save Part 3
-          </button>
-          <button type="button" onClick={() => void endSession()} disabled={busy}>
-            {busy ? 'Ending...' : 'End Interview'}
-          </button>
-        </div>
-
+        {autoEnding ? <p className="speaking-error">Maximum session time reached. Ending automatically…</p> : null}
+        {reconnecting ? <p className="speaking-muted">Reconnecting…</p> : null}
         {error ? <p className="speaking-error">{error}</p> : null}
       </section>
 
-      <section className="card">
-        <h2>Live Captions</h2>
-        <LiveCaptions transcript={transcript} />
+      {/* Current question — shown while session is active */}
+      {sessionActive && currentQuestion ? (
+        <section className="card question-card">
+          <p className="question-label">Examiner</p>
+          <p className="question-text">{currentQuestion}</p>
+        </section>
+      ) : null}
+
+      {/* Main PTT controls */}
+      <section className="card ptt-controls-card">
+        {!sessionActive ? (
+          <div className="ptt-connect-area">
+            <h2 className="ptt-connect-heading">Ready to start?</h2>
+            <p className="speaking-muted">
+              The examiner will ask a question. Click <strong>Start Answer</strong> when you want to speak,
+              then <strong>End Answer</strong> when you finish. Evaluation and the next question come automatically.
+            </p>
+            <button
+              type="button"
+              className="session-connect-btn"
+              onClick={() => void toggleSession()}
+              disabled={busy || !session}
+            >
+              {busy ? 'Connecting…' : '▶ Begin Session'}
+            </button>
+          </div>
+        ) : (
+          <div className="ptt-controls">
+            {(answerState === 'idle' || answerState === 'connected') ? (
+              <p className="speaking-muted ptt-hint">
+                {answerState === 'connected' ? '⏳ Waiting for examiner…' : 'Session starting…'}
+              </p>
+            ) : null}
+
+            {answerState === 'ready_to_answer' ? (
+              <button
+                type="button"
+                className="ptt-btn ptt-btn-start"
+                onClick={() => void startAnswer()}
+                disabled={busy}
+              >
+                🎙 Start Answer
+              </button>
+            ) : null}
+
+            {answerState === 'recording' ? (
+              <>
+                <p className="ptt-recording-hint">🔴 Recording — speak your answer now</p>
+                <button
+                  type="button"
+                  className="ptt-btn ptt-btn-end"
+                  onClick={() => void endAnswer()}
+                >
+                  ⏹ End Answer
+                </button>
+              </>
+            ) : null}
+
+            {answerState === 'evaluating' ? (
+              <p className="speaking-muted ptt-hint">
+                {turnEvaluating ? '⏳ Evaluating your answer…' : '⏳ Preparing next question…'}
+              </p>
+            ) : null}
+
+            <div className="ptt-secondary-actions">
+              <button
+                type="button"
+                className="ptt-end-session-btn"
+                onClick={() => void endSession()}
+                disabled={busy}
+              >
+                {busy ? 'Ending…' : '⏏ End Interview'}
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
+      {/* Live captions */}
+      {transcript.length > 0 ? (
+        <section className="card">
+          <h2>Live Captions</h2>
+          <LiveCaptions transcript={transcript} />
+        </section>
+      ) : null}
+
+      {/* Cue card for Part 2 */}
       <section className="card">
         <CueCard
           active={part === 'part2'}
@@ -577,6 +665,32 @@ Focus hint: ${focusHint || 'none'}`
           ]}
         />
       </section>
+
+      {/* Part jump controls */}
+      {sessionActive ? (
+        <section className="card">
+          <p className="speaking-muted" style={{ marginBottom: '0.5rem' }}>Jump to part:</p>
+          <div className="speaking-actions">
+            <button type="button" onClick={() => { setPart('part1'); partRef.current = 'part1'; void persistPart('part1'); void voiceRef.current?.setTurnMode('normal'); }} disabled={busy}>Part 1</button>
+            <button type="button" onClick={() => { setPart('part2'); partRef.current = 'part2'; void persistPart('part2'); void voiceRef.current?.setTurnMode('monologue'); }} disabled={busy}>Part 2</button>
+            <button type="button" onClick={() => { setPart('part3'); partRef.current = 'part3'; void persistPart('part3'); void voiceRef.current?.setTurnMode('normal'); }} disabled={busy}>Part 3</button>
+          </div>
+        </section>
+      ) : null}
     </div>
+  );
+}
+
+export default function SessionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="card speaking-shell">
+          <p className="speaking-muted">Loading session…</p>
+        </div>
+      }
+    >
+      <SessionContent />
+    </Suspense>
   );
 }

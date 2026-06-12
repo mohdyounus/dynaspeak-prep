@@ -15,6 +15,7 @@ export interface VoiceSession {
   setTurnMode(mode: TurnMode): Promise<void>;
   pauseListening(): Promise<void>;
   resumeListening(): Promise<void>;
+  commitAnswer(): Promise<void>;
   onTranscript(cb: (entry: TranscriptEntry) => void): void;
   onStateChange(cb: (state: VoiceState) => void): void;
   onToolCall(cb: (tool: ToolCall) => Promise<string>): void;
@@ -199,6 +200,13 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
 
   async resumeListening(): Promise<void> {
     // Realtime keeps the browser mic stream active; server VAD manages turn-taking.
+  }
+
+  async commitAnswer(): Promise<void> {
+    // Commit the accumulated audio buffer and request a response from the model.
+    if (!this.started) return;
+    this.sendEvent({ type: 'input_audio_buffer.commit' });
+    this.sendEvent({ type: 'response.create' });
   }
 
   onTranscript(cb: (entry: TranscriptEntry) => void): void {
@@ -505,6 +513,10 @@ export class BrowserVoiceSession implements VoiceSession {
     }
   }
 
+  async commitAnswer(): Promise<void> {
+    // Browser speech is PTT-via-recognition stop; no explicit commit needed.
+  }
+
   onTranscript(cb: (entry: TranscriptEntry) => void): void {
     this.transcriptHandlers.push(cb);
   }
@@ -577,6 +589,10 @@ export class MockVoiceSession implements VoiceSession {
   }
 
   async resumeListening(): Promise<void> {
+    // No-op for mock mode.
+  }
+
+  async commitAnswer(): Promise<void> {
     // No-op for mock mode.
   }
 

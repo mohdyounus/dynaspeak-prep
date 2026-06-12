@@ -309,6 +309,226 @@ a:hover {
   margin-top: 0.4rem;
 }
 
+/* ── Session page: info bar ───────────────────────────────────────────────── */
+.session-info-card {
+  padding: 0.65rem 1rem;
+}
+
+.session-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.session-mode-badge {
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+/* ── Current question card ────────────────────────────────────────────────── */
+.question-card {
+  border-left: 4px solid #6941c6;
+  background: #faf5ff;
+}
+
+.question-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6941c6;
+  margin: 0 0 0.4rem;
+}
+
+.question-text {
+  font-size: 1.15rem;
+  font-weight: 500;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--text);
+}
+
+/* ── PTT controls ─────────────────────────────────────────────────────────── */
+.ptt-controls-card {
+  text-align: center;
+}
+
+.ptt-connect-area {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: center;
+}
+
+.ptt-connect-heading {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.session-connect-btn {
+  background: #6941c6;
+  color: #fff;
+  border: none;
+  border-radius: 999px;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.session-connect-btn:hover:not(:disabled) {
+  background: #5a35b0;
+}
+
+.session-connect-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ptt-controls {
+  display: grid;
+  gap: 0.9rem;
+  justify-items: center;
+}
+
+.ptt-hint {
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.ptt-recording-hint {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #b91c1c;
+  margin: 0;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.ptt-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.8rem 2.2rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, opacity 0.15s;
+  min-width: 180px;
+}
+
+.ptt-btn:active {
+  transform: scale(0.97);
+}
+
+.ptt-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.ptt-btn-start {
+  background: #12b76a;
+  color: #fff;
+}
+
+.ptt-btn-start:hover:not(:disabled) {
+  background: #0da85e;
+}
+
+.ptt-btn-end {
+  background: #d92d20;
+  color: #fff;
+}
+
+.ptt-btn-end:hover {
+  background: #b91c1c;
+}
+
+.ptt-secondary-actions {
+  margin-top: 0.5rem;
+}
+
+.ptt-end-session-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  font: inherit;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.ptt-end-session-btn:hover:not(:disabled) {
+  background: #fff1f1;
+  border-color: #fca5a5;
+  color: #b91c1c;
+}
+
+.ptt-end-session-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ── Part selector (setup page) ───────────────────────────────────────────── */
+.part-fieldset {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 0.9rem;
+  margin: 0;
+}
+
+.part-fieldset legend {
+  font-weight: 600;
+  padding: 0 0.3rem;
+  font-size: 0.9rem;
+}
+
+.part-selector {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.part-select-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font: inherit;
+  flex: 1;
+  min-width: 100px;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.part-select-btn strong {
+  font-size: 0.9rem;
+}
+
+.part-select-btn span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.part-select-btn.active {
+  border-color: #6941c6;
+  background: #f9f5ff;
+}
+
+.part-select-btn.active strong {
+  color: #6941c6;
+}
+
 .criteria-grid {
   display: grid;
   gap: 0.7rem;
