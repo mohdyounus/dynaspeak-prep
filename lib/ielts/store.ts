@@ -4,7 +4,12 @@ import { randomUUID } from 'node:crypto';
 import type { SpeakingPart, SpeakingSession } from '@/lib/ielts/types';
 import { prisma, getPrismaClient } from '@/lib/db';
 
-const dataDir = path.join(process.cwd(), '.data');
+// On Vercel (read-only FS), use /tmp which is writable in serverless functions.
+// Locally, use .data/ in the project root.
+const isVercel = !!process.env.VERCEL;
+const dataDir = isVercel
+  ? path.join('/tmp', 'dynaspeak-data')
+  : path.join(process.cwd(), '.data');
 const sessionsFile = path.join(dataDir, 'speaking-sessions.json');
 
 // Check if Prisma is available
@@ -13,18 +18,22 @@ function hasPrisma(): boolean {
 }
 
 function ensureStore() {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-  if (!fs.existsSync(sessionsFile)) {
-    fs.writeFileSync(sessionsFile, JSON.stringify({ sessions: [] }, null, 2), 'utf8');
+  try {
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    if (!fs.existsSync(sessionsFile)) {
+      fs.writeFileSync(sessionsFile, JSON.stringify({ sessions: [] }, null, 2), 'utf8');
+    }
+  } catch {
+    // Filesystem unavailable — session data will only persist in Prisma if configured
   }
 }
 
 function readAll(): SpeakingSession[] {
-  ensureStore();
-  const raw = fs.readFileSync(sessionsFile, 'utf8');
   try {
+    ensureStore();
+    const raw = fs.readFileSync(sessionsFile, 'utf8');
     const parsed = JSON.parse(raw) as { sessions?: SpeakingSession[] };
     return Array.isArray(parsed.sessions) ? parsed.sessions : [];
   } catch {
@@ -33,8 +42,12 @@ function readAll(): SpeakingSession[] {
 }
 
 function writeAll(sessions: SpeakingSession[]) {
-  ensureStore();
-  fs.writeFileSync(sessionsFile, JSON.stringify({ sessions }, null, 2), 'utf8');
+  try {
+    ensureStore();
+    fs.writeFileSync(sessionsFile, JSON.stringify({ sessions }, null, 2), 'utf8');
+  } catch {
+    // Filesystem write failed — Prisma is the primary persistence on serverless
+  }
 }
 
 function toSession(row: {
