@@ -121,6 +121,10 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
       session: {
         instructions: systemPrompt,
         modalities: ['audio', 'text'],
+        // Enable transcription so student speech arrives as text events
+        input_audio_transcription: { model: 'whisper-1' },
+        // Server VAD is set to a high threshold by default; PTT mode
+        // manually commits audio so the model never auto-responds mid-turn.
         turn_detection: {
           type: 'server_vad',
           silence_duration_ms: this.turnMode === 'monologue' ? 2500 : 1000
@@ -203,10 +207,12 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   }
 
   async commitAnswer(): Promise<void> {
-    // Commit the accumulated audio buffer and request a response from the model.
+    // Commit the accumulated audio buffer to trigger transcription.
+    // Do NOT send response.create here — the conversation is driven by
+    // Claude evaluation (processStudentAnswer). OpenAI Realtime is used
+    // only for voice I/O (mic → Whisper STT and TTS ← examiner speech).
     if (!this.started) return;
     this.sendEvent({ type: 'input_audio_buffer.commit' });
-    this.sendEvent({ type: 'response.create' });
   }
 
   onTranscript(cb: (entry: TranscriptEntry) => void): void {
