@@ -28,6 +28,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   private remoteAudio: HTMLAudioElement | null = null;
   private turnMode: TurnMode = 'normal';
   private started = false;
+  private closed = false;
 
   constructor(private readonly tokenEndpoint = '/api/session/token') {}
 
@@ -44,6 +45,20 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
 
     const pc = new RTCPeerConnection();
     this.pc = pc;
+    this.closed = false;
+
+    pc.onconnectionstatechange = () => {
+      if (!this.pc) return;
+      const state = this.pc.connectionState;
+      if (state === 'connected') {
+        this.emitState('listening');
+      }
+      if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+        if (!this.closed) {
+          this.emitState('thinking');
+        }
+      }
+    };
 
     this.remoteAudio = new Audio();
     this.remoteAudio.autoplay = true;
@@ -105,18 +120,15 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
     const line = text.trim();
     if (!line || !this.started) return;
 
-    this.pushTranscript({ role: 'examiner', text: line, ts: Date.now() });
     this.emitState('speaking');
 
     this.sendEvent({
-      type: 'conversation.item.create',
-      item: {
-        type: 'message',
-        role: 'user',
-        content: [{ type: 'input_text', text: `Examiner should say: ${line}` }]
+      type: 'response.create',
+      response: {
+        instructions: line,
+        modalities: ['audio', 'text']
       }
     });
-    this.sendEvent({ type: 'response.create' });
   }
 
   async setTurnMode(mode: TurnMode): Promise<void> {
@@ -143,6 +155,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
 
   async end(): Promise<TranscriptEntry[]> {
     this.started = false;
+    this.closed = true;
     try {
       this.dc?.close();
     } catch {

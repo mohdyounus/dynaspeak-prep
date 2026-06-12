@@ -42,6 +42,27 @@ function parseReport(raw: string): EvaluationReport {
   return JSON.parse(cleaned) as EvaluationReport;
 }
 
+function normalizeTranscript(entries: TranscriptEntry[]): TranscriptEntry[] {
+  const filtered = entries
+    .map((e): TranscriptEntry => ({
+      role: e.role === 'examiner' ? 'examiner' : 'student',
+      text: String(e.text || '').replace(/\s+/g, ' ').trim(),
+      ts: Number.isFinite(e.ts) ? e.ts : Date.now()
+    }))
+    .filter((e) => e.text.length > 0)
+    .sort((a, b) => a.ts - b.ts);
+
+  const deduped: TranscriptEntry[] = [];
+  for (const entry of filtered) {
+    const prev = deduped[deduped.length - 1];
+    if (prev && prev.role === entry.role && prev.text.toLowerCase() === entry.text.toLowerCase()) {
+      continue;
+    }
+    deduped.push(entry);
+  }
+  return deduped;
+}
+
 export async function POST(req: Request) {
   let body: { sessionId?: string };
   try {
@@ -60,7 +81,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Session not found.' }, { status: 404 });
   }
 
-  const transcript = (session.transcript || []) as TranscriptEntry[];
+  const transcript = normalizeTranscript((session.transcript || []) as TranscriptEntry[]);
   if (!transcript.length) {
     return NextResponse.json({ error: 'Session transcript is empty. End session first.' }, { status: 400 });
   }
@@ -69,7 +90,12 @@ export async function POST(req: Request) {
   try {
     const prompt = buildEvaluatorPrompt({ transcript, targetScore: session.targetScore });
     const raw = await callClaude(prompt);
-    report = parseReport(raw);
+    try {
+      report = parseReport(raw);
+    } catch {
+      const retryRaw = await callClaude(`${prompt}\n\nReturn strict JSON only. No markdown fences.`);
+      report = parseReport(retryRaw);
+    }
   } catch {
     report = buildFallbackReport(session.targetScore);
   }
