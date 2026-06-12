@@ -23,6 +23,7 @@ export async function POST() {
   try {
     let lastStatus = 502;
     let lastBody = '';
+    const attempts: Array<{ endpoint: string; status: number; bodySample: string }> = [];
 
     for (const endpoint of OPENAI_REALTIME_TOKEN_ENDPOINTS) {
       const response = await fetch(endpoint, {
@@ -47,6 +48,7 @@ export async function POST() {
       const bodyText = await response.text();
       lastStatus = response.status;
       lastBody = bodyText;
+      attempts.push({ endpoint, status: response.status, bodySample: bodyText.slice(0, 300) });
 
       if (!response.ok) {
         continue;
@@ -65,7 +67,8 @@ export async function POST() {
       {
         enabled: false,
         error: `Realtime session token request failed (${lastStatus}).`,
-        details: lastBody
+        details: lastBody,
+        attempts
       },
       { status: lastStatus }
     );
