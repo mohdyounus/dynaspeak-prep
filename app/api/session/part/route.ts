@@ -22,11 +22,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid part value.' }, { status: 400 });
   }
 
-  const current = getSession(sessionId);
+  const current = await getSession(sessionId);
   if (!current) {
     return NextResponse.json({ error: 'Session not found.' }, { status: 404 });
   }
 
-  const updated = updateSession(sessionId, { part, status: 'live' });
+  const updated = await updateSession(sessionId, { part, status: 'live' });
   return NextResponse.json({ ok: true, session: updated });
 }

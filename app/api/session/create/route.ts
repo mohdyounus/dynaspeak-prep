@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     technicalInterests: interests
   });
 
-  const session = createSession({
+  const session = await createSession({
     targetScore,
     background,
     interests,

@@ -1,0 +1,25 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+  targetScore   String
+  background    String   @db.Text
+  interests     String
+  status        String   @default("created")
+  transcript    Json?
+  report        Json?
+  durationSec   Int?
+  examinerPrompt String?  @db.Text
+  githubUsername String?
+  profileSummary String?  @db.Text
+  focus         Json?
+  part          String?
+}

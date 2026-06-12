@@ -3,12 +3,20 @@ import type { TranscriptEntry } from '@/lib/ielts/types';
 export type VoiceState = 'listening' | 'speaking' | 'thinking' | 'ended';
 export type TurnMode = 'normal' | 'monologue';
 
+export type ToolCall = {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+};
+
 export interface VoiceSession {
   start(systemPrompt: string): Promise<void>;
   speak(text: string): Promise<void>;
   setTurnMode(mode: TurnMode): Promise<void>;
   onTranscript(cb: (entry: TranscriptEntry) => void): void;
   onStateChange(cb: (state: VoiceState) => void): void;
+  onToolCall(cb: (tool: ToolCall) => Promise<string>): void;
+  submitToolResult(toolCallId: string, result: string): Promise<void>;
   end(): Promise<TranscriptEntry[]>;
 }
 
@@ -22,6 +30,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   private transcript: TranscriptEntry[] = [];
   private transcriptHandlers: Array<(entry: TranscriptEntry) => void> = [];
   private stateHandlers: Array<(state: VoiceState) => void> = [];
+  private toolHandlers: Array<(tool: ToolCall) => Promise<string>> = [];
   private pc: RTCPeerConnection | null = null;
   private dc: RTCDataChannel | null = null;
   private localStream: MediaStream | null = null;
@@ -29,6 +38,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   private turnMode: TurnMode = 'normal';
   private started = false;
   private closed = false;
+  private pendingToolCalls: Map<string, ToolCall> = new Map();
 
   constructor(private readonly tokenEndpoint = '/api/session/token') {}
 
@@ -110,7 +120,42 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
         turn_detection: {
           type: 'server_vad',
           silence_duration_ms: this.turnMode === 'monologue' ? 2500 : 1000
-        }
+        },
+        tools: [
+          {
+            name: 'display_cue_card',
+            description:
+              'Display the cue card topic and bullet points to the student for Part 2 preparation. Call this when transitioning to Part 2.',
+            parameters: {
+              type: 'object',
+              properties: {
+                topic: { type: 'string', description: 'The main topic for the cue card' },
+                bullets: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'List of bullet points to guide the students response'
+                }
+              },
+              required: ['topic', 'bullets']
+            }
+          },
+          {
+            name: 'set_turn_detection',
+            description:
+              'Control VAD turn detection sensitivity. Use "monologue" mode during Part 2 to prevent interrupting the student during their 1-2 minute long turn. Switch back to "normal" after Part 2.',
+            parameters: {
+              type: 'object',
+              properties: {
+                mode: {
+                  type: 'string',
+                  enum: ['normal', 'monologue'],
+                  description: 'normal = 1000ms silence threshold; monologue = 2500ms (for Part 2 long turn)'
+                }
+              },
+              required: ['mode']
+            }
+          }
+        ]
       }
     });
     this.emitState('listening');
@@ -151,6 +196,25 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
 
   onStateChange(cb: (state: VoiceState) => void): void {
     this.stateHandlers.push(cb);
+  }
+
+  onToolCall(cb: (tool: ToolCall) => Promise<string>): void {
+    this.toolHandlers.push(cb);
+  }
+
+  async submitToolResult(toolCallId: string, result: string): Promise<void> {
+    if (!this.started) return;
+    this.sendEvent({
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id: toolCallId,
+        output: result
+      }
+    });
+    this.sendEvent({
+      type: 'response.create'
+    });
   }
 
   async end(): Promise<TranscriptEntry[]> {
@@ -204,10 +268,42 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
       const event = JSON.parse(raw) as {
         type?: string;
         transcript?: string;
-        item?: { role?: string; content?: Array<{ type?: string; text?: string; transcript?: string }> };
+        item?: { 
+          type?: string; 
+          role?: string; 
+          content?: Array<{ type?: string; text?: string; transcript?: string }>;
+          call_id?: string;
+          name?: string;
+          arguments?: string;
+        };
       };
 
       if (!event?.type) return;
+
+      // Handle function/tool calls
+      if (event.type === 'response.function_call_arguments.done' && event.item) {
+        const { call_id, name, arguments: argsStr } = event.item;
+        if (call_id && name && argsStr) {
+          try {
+            const args = JSON.parse(argsStr) as Record<string, unknown>;
+            const tool: ToolCall = { id: call_id, name, arguments: args };
+            this.pendingToolCalls.set(call_id, tool);
+            
+            // Invoke all tool handlers async
+            this.toolHandlers.forEach((handler) => {
+              handler(tool).then((result) => {
+                this.submitToolResult(call_id, result);
+              }).catch((err) => {
+                console.error(`Tool handler error for ${name}:`, err);
+                this.submitToolResult(call_id, `Error: ${String(err)}`);
+              });
+            });
+          } catch {
+            // ignore malformed tool arguments
+          }
+        }
+        return;
+      }
 
       if (event.type === 'response.output_audio_transcript.done') {
         const examinerText = String(event.transcript || '').trim();
@@ -374,6 +470,14 @@ export class BrowserVoiceSession implements VoiceSession {
     this.stateHandlers.push(cb);
   }
 
+  onToolCall(cb: (tool: ToolCall) => Promise<string>): void {
+    // Browser fallback does not support tool calls; register but ignore.
+  }
+
+  async submitToolResult(_toolCallId: string, _result: string): Promise<void> {
+    // Browser fallback does not support tool calls.
+  }
+
   async end(): Promise<TranscriptEntry[]> {
     this.active = false;
     if (typeof window !== 'undefined' && window.speechSynthesis?.speaking) {
@@ -431,6 +535,14 @@ export class MockVoiceSession implements VoiceSession {
 
   onStateChange(cb: (state: VoiceState) => void): void {
     this.stateHandlers.push(cb);
+  }
+
+  onToolCall(cb: (tool: ToolCall) => Promise<string>): void {
+    // Mock does not support tool calls; register but ignore.
+  }
+
+  async submitToolResult(_toolCallId: string, _result: string): Promise<void> {
+    // Mock does not support tool calls.
   }
 
   async end(): Promise<TranscriptEntry[]> {

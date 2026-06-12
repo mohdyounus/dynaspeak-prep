@@ -31,7 +31,41 @@ function writeAll(sessions: SpeakingSession[]) {
   fs.writeFileSync(sessionsFile, JSON.stringify({ sessions }, null, 2), 'utf8');
 }
 
-export function createSession(input: {
+function toSession(row: {
+  id: string;
+  createdAt: Date;
+  targetScore: string;
+  background: string;
+  interests: string;
+  status: string;
+  transcript: unknown;
+  report: unknown;
+  durationSec: number | null;
+  examinerPrompt: string | null;
+  githubUsername: string | null;
+  profileSummary: string | null;
+  focus: unknown;
+  part: string | null;
+}): SpeakingSession {
+  return {
+    id: row.id,
+    createdAt: row.createdAt.toISOString(),
+    targetScore: row.targetScore,
+    background: row.background,
+    interests: row.interests,
+    status: row.status as SpeakingSession['status'],
+    transcript: Array.isArray(row.transcript) ? (row.transcript as SpeakingSession['transcript']) : undefined,
+    report: row.report as SpeakingSession['report'],
+    durationSec: row.durationSec ?? undefined,
+    examinerPrompt: row.examinerPrompt ?? undefined,
+    githubUsername: row.githubUsername ?? undefined,
+    profileSummary: row.profileSummary ?? undefined,
+    focus: Array.isArray(row.focus) ? (row.focus as string[]) : undefined,
+    part: row.part === 'part1' || row.part === 'part2' || row.part === 'part3' ? row.part : undefined
+  };
+}
+
+export async function createSession(input: {
   targetScore: string;
   background: string;
   interests: string;
@@ -40,7 +74,7 @@ export function createSession(input: {
   profileSummary?: string;
   focus?: string[];
   part?: SpeakingPart;
-}): SpeakingSession {
+}): Promise<SpeakingSession> {
   const sessions = readAll();
   const session: SpeakingSession = {
     id: randomUUID(),
@@ -60,12 +94,12 @@ export function createSession(input: {
   return session;
 }
 
-export function getSession(id: string): SpeakingSession | null {
+export async function getSession(id: string): Promise<SpeakingSession | null> {
   const sessions = readAll();
   return sessions.find((s) => s.id === id) || null;
 }
 
-export function updateSession(id: string, patch: Partial<SpeakingSession>): SpeakingSession | null {
+export async function updateSession(id: string, patch: Partial<SpeakingSession>): Promise<SpeakingSession | null> {
   const sessions = readAll();
   const idx = sessions.findIndex((s) => s.id === id);
   if (idx < 0) return null;

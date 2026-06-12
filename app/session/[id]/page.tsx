@@ -101,6 +101,26 @@ export default function SessionPage() {
         setState(next as 'listening' | 'speaking' | 'thinking');
       }
     });
+    voice.onToolCall(async (tool) => {
+      if (tool.name === 'display_cue_card') {
+        const { topic, bullets } = tool.arguments as { topic?: string; bullets?: string[] };
+        if (topic && bullets) {
+          setPart('part2');
+          await persistPart('part2');
+          return `Cue card displayed: ${topic}. Student has 1 minute to prepare, then 1-2 minutes to speak.`;
+        }
+        return 'Error: invalid cue card parameters';
+      }
+      if (tool.name === 'set_turn_detection') {
+        const { mode } = tool.arguments as { mode?: string };
+        if (mode === 'monologue' || mode === 'normal') {
+          await voiceRef.current?.setTurnMode(mode);
+          return `VAD mode set to ${mode} (silence threshold ${mode === 'monologue' ? '2500ms' : '1000ms'}).`;
+        }
+        return 'Error: invalid turn detection mode';
+      }
+      return 'Unknown tool';
+    });
   }
 
   useEffect(() => {

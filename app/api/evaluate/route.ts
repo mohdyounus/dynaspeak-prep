@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'sessionId is required.' }, { status: 400 });
   }
 
-  const session = getSession(sessionId);
+  const session = await getSession(sessionId);
   if (!session) {
     return NextResponse.json({ error: 'Session not found.' }, { status: 404 });
   }
@@ -100,7 +100,7 @@ export async function POST(req: Request) {
     report = buildFallbackReport(session.targetScore);
   }
 
-  const updated = updateSession(sessionId, {
+  const updated = await updateSession(sessionId, {
     report,
     status: 'evaluated'
   });
