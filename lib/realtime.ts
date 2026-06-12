@@ -13,6 +13,8 @@ export interface VoiceSession {
   start(systemPrompt: string): Promise<void>;
   speak(text: string): Promise<void>;
   setTurnMode(mode: TurnMode): Promise<void>;
+  pauseListening(): Promise<void>;
+  resumeListening(): Promise<void>;
   onTranscript(cb: (entry: TranscriptEntry) => void): void;
   onStateChange(cb: (state: VoiceState) => void): void;
   onToolCall(cb: (tool: ToolCall) => Promise<string>): void;
@@ -188,6 +190,14 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
         }
       }
     });
+  }
+
+  async pauseListening(): Promise<void> {
+    // Realtime keeps the browser mic stream active; server VAD manages turn-taking.
+  }
+
+  async resumeListening(): Promise<void> {
+    // Realtime keeps the browser mic stream active; server VAD manages turn-taking.
   }
 
   onTranscript(cb: (entry: TranscriptEntry) => void): void {
@@ -462,6 +472,25 @@ export class BrowserVoiceSession implements VoiceSession {
     // Web Speech API does not expose configurable server-side VAD.
   }
 
+  async pauseListening(): Promise<void> {
+    this.active = false;
+    try {
+      this.recognition?.stop();
+    } catch {
+      // ignore
+    }
+  }
+
+  async resumeListening(): Promise<void> {
+    if (!this.recognition || this.active) return;
+    this.active = true;
+    try {
+      this.recognition.start();
+    } catch {
+      // ignore
+    }
+  }
+
   onTranscript(cb: (entry: TranscriptEntry) => void): void {
     this.transcriptHandlers.push(cb);
   }
@@ -526,6 +555,14 @@ export class MockVoiceSession implements VoiceSession {
   }
 
   async setTurnMode(_mode: TurnMode): Promise<void> {
+    // No-op for mock mode.
+  }
+
+  async pauseListening(): Promise<void> {
+    // No-op for mock mode.
+  }
+
+  async resumeListening(): Promise<void> {
     // No-op for mock mode.
   }
 

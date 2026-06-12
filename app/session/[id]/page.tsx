@@ -32,6 +32,7 @@ export default function SessionPage() {
   const [elapsedSec, setElapsedSec] = useState(0);
   const [autoEnding, setAutoEnding] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [turnEvaluating, setTurnEvaluating] = useState(false);
 
   const voiceRef = useRef<VoiceSession | null>(null);
   const greetedRef = useRef(false);
@@ -40,6 +41,7 @@ export default function SessionPage() {
   const endingRef = useRef(false);
   const reconnectAttemptedRef = useRef(false);
   const voiceStartedRef = useRef(false);
+  const studentSilenceTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -83,6 +85,10 @@ export default function SessionPage() {
       setLocalTranscript((prev) => [...prev, entry]);
 
       if (entry.role === 'student') {
+        if (studentSilenceTimerRef.current) {
+          window.clearTimeout(studentSilenceTimerRef.current);
+          studentSilenceTimerRef.current = null;
+        }
         const normalized = entry.text.toLowerCase();
         if (
           normalized.includes("i'm done")
@@ -238,6 +244,17 @@ export default function SessionPage() {
   async function respondToStudent(answer: string) {
     if (!voiceRef.current) return;
 
+    setTurnEvaluating(true);
+    await voiceRef.current.pauseListening();
+    const llmResult = await evaluateStudentTurn(answer);
+    setTurnEvaluating(false);
+
+    await voiceRef.current.resumeListening();
+
+    if (llmResult) {
+      return;
+    }
+
     if (part === 'part1') {
       const questions = [
         `Thank you. What kind of work or study do you do at the moment? ${focusHint}`,
@@ -280,6 +297,91 @@ export default function SessionPage() {
     void answer;
   }
 
+  async function evaluateStudentTurn(answer: string): Promise<boolean> {
+    if (!sessionId) return false;
+
+    try {
+      const res = await fetch('/api/claude', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 320,
+          temperature: 0.2,
+          messages: [
+            {
+              role: 'user',
+              content: `You are tutoring an IELTS speaking student.
+
+Return strict JSON only with this exact shape:
+{
+  "evaluation": "one short sentence of feedback",
+  "nextQuestion": "one next speaking question"
+}
+
+Rules:
+- Keep evaluation short and supportive.
+- nextQuestion must continue the IELTS speaking flow.
+- Do not include markdown fences or extra text.
+
+Question part: ${part}
+Student answer: ${answer}
+Focus hint: ${focusHint || 'none'}`
+            }
+          ]
+        })
+      });
+
+      if (!res.ok) return false;
+
+      const data = await res.json();
+      const llmText = String(data?.text || '').trim();
+      let parsed: { evaluation?: string; nextQuestion?: string } | null = null;
+
+      try {
+        const cleaned = llmText.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+        parsed = JSON.parse(cleaned) as { evaluation?: string; nextQuestion?: string };
+      } catch {
+        const evaluationLine = llmText.match(/Evaluation:\s*(.+)/i)?.[1]?.trim();
+        const nextQuestionLine = llmText.match(/Next question:\s*(.+)/i)?.[1]?.trim();
+        parsed = {
+          evaluation: evaluationLine,
+          nextQuestion: nextQuestionLine
+        };
+      }
+
+      const evaluationLine = String(parsed?.evaluation || '').trim();
+      const nextQuestionLine = String(parsed?.nextQuestion || '').trim();
+
+      if (!evaluationLine && !nextQuestionLine) return false;
+
+      if (evaluationLine) {
+        setLocalTranscript((prev) => [...prev, { role: 'examiner', text: evaluationLine, ts: Date.now() }]);
+        await voiceRef.current?.speak(evaluationLine);
+      }
+
+      if (nextQuestionLine) {
+        setLocalTranscript((prev) => [...prev, { role: 'examiner', text: nextQuestionLine, ts: Date.now() }]);
+        await voiceRef.current?.speak(nextQuestionLine);
+      }
+
+      if (studentSilenceTimerRef.current) {
+        window.clearTimeout(studentSilenceTimerRef.current);
+      }
+      studentSilenceTimerRef.current = window.setTimeout(() => {
+        if (!micEnabled || endingRef.current) return;
+        void voiceRef.current?.setTurnMode(part === 'part2' ? 'monologue' : 'normal');
+      }, part === 'part2' ? 2500 : 1000);
+
+      await voiceRef.current?.resumeListening();
+
+      return true;
+    } catch {
+      await voiceRef.current?.resumeListening();
+      return false;
+    }
+  }
+
   async function toggleMic() {
     if (!voiceRef.current) return;
 
@@ -313,6 +415,10 @@ export default function SessionPage() {
     }
 
     setMicEnabled(false);
+    if (studentSilenceTimerRef.current) {
+      window.clearTimeout(studentSilenceTimerRef.current);
+      studentSilenceTimerRef.current = null;
+    }
     const endedTranscript = await voiceRef.current.end();
     setLocalTranscript(endedTranscript);
     setState('thinking');
@@ -335,6 +441,11 @@ export default function SessionPage() {
 
     try {
       const capturedTranscript = voiceRef.current ? await voiceRef.current.end() : transcript;
+
+      if (studentSilenceTimerRef.current) {
+        window.clearTimeout(studentSilenceTimerRef.current);
+        studentSilenceTimerRef.current = null;
+      }
 
       const endRes = await fetch('/api/session/end', {
         method: 'POST',
@@ -387,6 +498,7 @@ export default function SessionPage() {
           Voice mode: {voiceMode === 'realtime' ? 'OpenAI Realtime' : voiceMode === 'browser' ? 'Browser Speech (fallback)' : 'Mock fallback'}
         </p>
         <p className="speaking-muted">Session timer: {fmtDuration(elapsedSec)} / 18:00</p>
+        {turnEvaluating ? <p className="speaking-muted">Evaluating your last answer...</p> : null}
         <p className="part-chip">{partLabel(part)}</p>
         <p className="speaking-muted">Turn detection: {getSilenceThreshold(part === 'part2' ? 'monologue' : 'normal')}ms silence threshold</p>
         {autoEnding ? <p className="speaking-error">Maximum session time reached. Ending interview automatically...</p> : null}

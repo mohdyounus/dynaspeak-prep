@@ -10,8 +10,16 @@ function SpeakingSetupContent() {
   const [githubUsername, setGithubUsername] = useState('');
   const [profileSummary, setProfileSummary] = useState('');
   const [focusInput, setFocusInput] = useState('');
+  const [attemptNo, setAttemptNo] = useState(1);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  function profileAttemptKey(nextTarget: string, nextGithub: string, nextSummary: string) {
+    const keyTarget = nextTarget.trim() || '6.5';
+    const keyGithub = nextGithub.trim().toLowerCase() || '-';
+    const keySummary = nextSummary.trim().slice(0, 80).toLowerCase() || '-';
+    return `speaking-attempt:${keyTarget}:${keyGithub}:${keySummary}`;
+  }
 
   useEffect(() => {
     const target = (searchParams.get('target') || '').trim();
@@ -23,6 +31,11 @@ function SpeakingSetupContent() {
     if (github) setGithubUsername(github);
     if (summary) setProfileSummary(summary);
     if (focus) setFocusInput(focus);
+
+    const effectiveTarget = target || '6.5';
+    const key = profileAttemptKey(effectiveTarget, github, summary);
+    const stored = typeof window !== 'undefined' ? Number(window.localStorage.getItem(key) || '0') : 0;
+    setAttemptNo(Number.isFinite(stored) && stored > 0 ? stored + 1 : 1);
   }, [searchParams]);
 
   async function onSubmit(e: FormEvent) {
@@ -37,6 +50,13 @@ function SpeakingSetupContent() {
       .slice(0, 8);
 
     try {
+      const key = profileAttemptKey(targetScore, githubUsername, profileSummary);
+      const current = typeof window !== 'undefined' ? Number(window.localStorage.getItem(key) || '0') : 0;
+      const nextAttempt = Number.isFinite(current) ? current + 1 : 1;
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, String(nextAttempt));
+      }
+
       const res = await fetch('/api/session/create', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -63,6 +83,7 @@ function SpeakingSetupContent() {
       <p className="speaking-muted">
         Start a guided IELTS speaking session. This is M1 scaffold with personalization and session persistence.
       </p>
+      <p className="speaking-muted">Attempt: {attemptNo}</p>
 
       <form onSubmit={onSubmit} className="speaking-form">
         <label>
