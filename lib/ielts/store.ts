@@ -172,7 +172,15 @@ export async function updateSession(id: string, patch: Partial<SpeakingSession>)
           targetScore: patch.targetScore || '',
           background: patch.background || '',
           interests: patch.interests || '',
-          status: patch.status || 'created'
+          status: patch.status || 'created',
+          transcript: patch.transcript,
+          report: patch.report,
+          durationSec: patch.durationSec,
+          examinerPrompt: patch.examinerPrompt || null,
+          githubUsername: patch.githubUsername || null,
+          profileSummary: patch.profileSummary || null,
+          focus: patch.focus || [],
+          part: patch.part || null
         },
         update: {
           targetScore: patch.targetScore,
@@ -191,13 +199,15 @@ export async function updateSession(id: string, patch: Partial<SpeakingSession>)
       });
       if (result) {
         const updated = toSession(result as Parameters<typeof toSession>[0]);
-        // Also write to file store to keep in sync
+        // Always write to file store to keep cross-instance fallback consistent
         const sessions = readAll();
         const idx = sessions.findIndex((s) => s.id === id);
         if (idx >= 0) {
           sessions[idx] = updated;
-          writeAll(sessions);
+        } else {
+          sessions.unshift(updated);
         }
+        writeAll(sessions);
         return updated;
       }
     } catch (err) {
