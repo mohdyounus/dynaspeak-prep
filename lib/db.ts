@@ -1,17 +1,38 @@
-type PrismaLikeClient = {
-  session: {
-    findUnique: (...args: unknown[]) => Promise<unknown>;
-    findMany: (...args: unknown[]) => Promise<unknown>;
-    upsert: (...args: unknown[]) => Promise<unknown>;
-  };
-};
+let prismaClient: unknown | null = null;
 
-const noop = async () => null;
+// Lazy initialize Prisma client when needed
+export function getPrismaClient() {
+  if (!prismaClient && process.env.DATABASE_URL) {
+    try {
+      const { PrismaClient } = require('@prisma/client');
+      prismaClient = new PrismaClient({
+        log: ['warn', 'error']
+      });
+    } catch (err) {
+      console.warn('Failed to initialize Prisma client:', err);
+      return null;
+    }
+  }
+  return prismaClient;
+}
 
-export const prisma: PrismaLikeClient = {
+// Fallback adapter: convert file-store session to Prisma API if needed
+export const prisma = {
   session: {
-    findUnique: noop,
-    findMany: noop,
-    upsert: noop
+    findUnique: async (args: any) => {
+      const client = getPrismaClient();
+      return client ? (client as any).session.findUnique(args) : null;
+    },
+    findMany: async (args?: any) => {
+      const client = getPrismaClient();
+      return client ? (client as any).session.findMany(args || {}) : [];
+    },
+    upsert: async (args: any) => {
+      const client = getPrismaClient();
+      return client ? (client as any).session.upsert(args) : null;
+    }
   }
 };
+
+
+

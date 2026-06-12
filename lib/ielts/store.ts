@@ -2,9 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { SpeakingPart, SpeakingSession } from '@/lib/ielts/types';
+import { prisma, getPrismaClient } from '@/lib/db';
 
 const dataDir = path.join(process.cwd(), '.data');
 const sessionsFile = path.join(dataDir, 'speaking-sessions.json');
+
+// Check if Prisma is available
+function hasPrisma(): boolean {
+  return !!getPrismaClient();
+}
 
 function ensureStore() {
   if (!fs.existsSync(dataDir)) {
@@ -75,9 +81,9 @@ export async function createSession(input: {
   focus?: string[];
   part?: SpeakingPart;
 }): Promise<SpeakingSession> {
-  const sessions = readAll();
+  const id = randomUUID();
   const session: SpeakingSession = {
-    id: randomUUID(),
+    id,
     createdAt: new Date().toISOString(),
     targetScore: input.targetScore,
     background: input.background,
@@ -89,17 +95,104 @@ export async function createSession(input: {
     part: input.part,
     status: 'created'
   };
+
+  // Try Prisma first; fall back to file store
+  if (hasPrisma()) {
+    try {
+      await prisma.session.upsert({
+        where: { id },
+        create: {
+          id,
+          targetScore: input.targetScore,
+          background: input.background,
+          interests: input.interests,
+          examinerPrompt: input.examinerPrompt || null,
+          githubUsername: input.githubUsername || null,
+          profileSummary: input.profileSummary || null,
+          focus: input.focus || [],
+          part: input.part || null,
+          status: 'created'
+        },
+        update: {} // Won't be used for fresh create, but required by upsert
+      });
+    } catch (err) {
+      console.warn('Prisma create failed, falling back to file store:', err);
+    }
+  }
+
+  // Always write to file store as fallback/backup
+  const sessions = readAll();
   sessions.unshift(session);
   writeAll(sessions);
+
   return session;
 }
 
 export async function getSession(id: string): Promise<SpeakingSession | null> {
+  // Try Prisma first
+  if (hasPrisma()) {
+    try {
+      const result = await prisma.session.findUnique({
+        where: { id }
+      });
+      if (result) {
+        return toSession(result as Parameters<typeof toSession>[0]);
+      }
+    } catch (err) {
+      console.warn('Prisma findUnique failed, falling back to file store:', err);
+    }
+  }
+
+  // Fall back to file store
   const sessions = readAll();
   return sessions.find((s) => s.id === id) || null;
 }
 
 export async function updateSession(id: string, patch: Partial<SpeakingSession>): Promise<SpeakingSession | null> {
+  // Try Prisma first
+  if (hasPrisma()) {
+    try {
+      const result = await prisma.session.upsert({
+        where: { id },
+        create: {
+          id,
+          targetScore: patch.targetScore || '',
+          background: patch.background || '',
+          interests: patch.interests || '',
+          status: patch.status || 'created'
+        },
+        update: {
+          targetScore: patch.targetScore,
+          background: patch.background,
+          interests: patch.interests,
+          status: patch.status,
+          transcript: patch.transcript,
+          report: patch.report,
+          durationSec: patch.durationSec,
+          examinerPrompt: patch.examinerPrompt,
+          githubUsername: patch.githubUsername,
+          profileSummary: patch.profileSummary,
+          focus: patch.focus,
+          part: patch.part
+        }
+      });
+      if (result) {
+        const updated = toSession(result as Parameters<typeof toSession>[0]);
+        // Also write to file store to keep in sync
+        const sessions = readAll();
+        const idx = sessions.findIndex((s) => s.id === id);
+        if (idx >= 0) {
+          sessions[idx] = updated;
+          writeAll(sessions);
+        }
+        return updated;
+      }
+    } catch (err) {
+      console.warn('Prisma update failed, falling back to file store:', err);
+    }
+  }
+
+  // Fall back to file store
   const sessions = readAll();
   const idx = sessions.findIndex((s) => s.id === id);
   if (idx < 0) return null;
