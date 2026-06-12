@@ -511,7 +511,14 @@ Focus hint: ${focusHint || 'none'}`
           sessionId,
           transcript: capturedTranscript,
           durationSec: elapsedSec,
-          part
+          part,
+          targetScore: session?.targetScore,
+          background: session?.background,
+          interests: session?.interests,
+          examinerPrompt: session?.examinerPrompt,
+          githubUsername: session?.githubUsername,
+          profileSummary: session?.profileSummary,
+          focus: session?.focus
         })
       });
       const endData = await endRes.json();
