@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 
-const OPENAI_REALTIME_SESSION_URL = 'https://api.openai.com/v1/realtime/sessions';
+const OPENAI_REALTIME_TOKEN_ENDPOINTS = [
+  'https://api.openai.com/v1/realtime/client_secrets',
+  'https://api.openai.com/v1/realtime/sessions'
+] as const;
 
 export async function POST() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -15,40 +18,47 @@ export async function POST() {
   }
 
   try {
-    const response = await fetch(OPENAI_REALTIME_SESSION_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-realtime-preview',
-        voice: 'alloy'
-      })
-    });
+    let lastStatus = 502;
+    let lastBody = '';
 
-    const bodyText = await response.text();
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          enabled: false,
-          error: `Realtime session token request failed (${response.status}).`,
-          details: bodyText
+    for (const endpoint of OPENAI_REALTIME_TOKEN_ENDPOINTS) {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
         },
-        { status: response.status }
-      );
+        body: JSON.stringify({
+          model: 'gpt-4o-realtime-preview',
+          voice: 'alloy'
+        })
+      });
+
+      const bodyText = await response.text();
+      lastStatus = response.status;
+      lastBody = bodyText;
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const parsed = JSON.parse(bodyText) as { client_secret?: { value?: string } };
+      const token = parsed?.client_secret?.value;
+      if (!token) {
+        continue;
+      }
+
+      return NextResponse.json({ enabled: true, token });
     }
 
-    const parsed = JSON.parse(bodyText) as { client_secret?: { value?: string } };
-    const token = parsed?.client_secret?.value;
-    if (!token) {
-      return NextResponse.json(
-        { enabled: false, error: 'Realtime token missing in provider response.' },
-        { status: 502 }
-      );
-    }
-
-    return NextResponse.json({ enabled: true, token });
+    return NextResponse.json(
+      {
+        enabled: false,
+        error: `Realtime session token request failed (${lastStatus}).`,
+        details: lastBody
+      },
+      { status: lastStatus }
+    );
   } catch {
     return NextResponse.json(
       { enabled: false, error: 'Failed to request realtime token.' },
