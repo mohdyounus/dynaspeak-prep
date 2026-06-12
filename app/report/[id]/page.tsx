@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { EvaluationReport, SpeakingSession } from '@/lib/ielts/types';
 import ReportCard from '@/components/ReportCard';
@@ -54,6 +55,15 @@ export default function ReportPage() {
   }, [sessionId]);
 
   const report = useMemo(() => session?.report || fallbackReport(), [session]);
+  const practiceAgainHref = useMemo(() => {
+    const params = new URLSearchParams();
+    if (session?.targetScore) params.set('target', session.targetScore);
+    if (session?.githubUsername) params.set('github', session.githubUsername);
+    if (session?.profileSummary) params.set('summary', session.profileSummary);
+    if (report?.nextSessionFocus?.length) params.set('focus', report.nextSessionFocus.join(', '));
+    const qs = params.toString();
+    return qs ? `/speaking?${qs}` : '/speaking';
+  }, [report?.nextSessionFocus, session?.githubUsername, session?.profileSummary, session?.targetScore]);
 
   return (
     <div className="list-grid">
@@ -100,6 +110,11 @@ export default function ReportPage() {
             <li key={idx}>{item}</li>
           ))}
         </ul>
+        <div className="report-actions">
+          <Link className="report-practice-btn" href={practiceAgainHref}>
+            Practice Again With This Focus
+          </Link>
+        </div>
       </section>
     </div>
   );

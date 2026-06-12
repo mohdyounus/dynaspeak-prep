@@ -37,6 +37,7 @@ export function createSession(input: {
   interests: string;
   githubUsername?: string;
   profileSummary?: string;
+  focus?: string[];
   part?: SpeakingPart;
 }): SpeakingSession {
   const sessions = readAll();
@@ -48,6 +49,7 @@ export function createSession(input: {
     interests: input.interests,
     githubUsername: input.githubUsername,
     profileSummary: input.profileSummary,
+    focus: input.focus,
     part: input.part,
     status: 'created'
   };

@@ -340,3 +340,21 @@ a:hover {
 .error-row p {
   margin: 0.25rem 0;
 }
+
+.report-actions {
+  margin-top: 0.9rem;
+}
+
+.report-practice-btn {
+  display: inline-block;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+}
+
+.report-practice-btn:hover {
+  text-decoration: none;
+  opacity: 0.92;
+}

@@ -1,26 +1,46 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function SpeakingSetupPage() {
+function SpeakingSetupContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [targetScore, setTargetScore] = useState('6.5');
   const [githubUsername, setGithubUsername] = useState('');
   const [profileSummary, setProfileSummary] = useState('');
+  const [focusInput, setFocusInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const target = (searchParams.get('target') || '').trim();
+    const github = (searchParams.get('github') || '').trim();
+    const summary = (searchParams.get('summary') || '').trim();
+    const focus = (searchParams.get('focus') || '').trim();
+
+    if (target) setTargetScore(target);
+    if (github) setGithubUsername(github);
+    if (summary) setProfileSummary(summary);
+    if (focus) setFocusInput(focus);
+  }, [searchParams]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
 
+    const focus = focusInput
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 8);
+
     try {
       const res = await fetch('/api/session/create', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ targetScore, githubUsername, profileSummary })
+        body: JSON.stringify({ targetScore, githubUsername, profileSummary, focus })
       });
 
       const data = await res.json();
@@ -75,6 +95,15 @@ export default function SpeakingSetupPage() {
           />
         </label>
 
+        <label>
+          Focus Areas (optional, comma separated)
+          <input
+            value={focusInput}
+            onChange={(e) => setFocusInput(e.target.value)}
+            placeholder="e.g. Part 2 fluency, tense consistency, vocabulary precision"
+          />
+        </label>
+
         <button type="submit" disabled={loading}>
           {loading ? 'Creating Session...' : 'Start Interview'}
         </button>
@@ -82,5 +111,13 @@ export default function SpeakingSetupPage() {
         {error ? <p className="speaking-error">{error}</p> : null}
       </form>
     </div>
+  );
+}
+
+export default function SpeakingSetupPage() {
+  return (
+    <Suspense fallback={<div className="card speaking-shell"><p className="speaking-muted">Loading speaking setup...</p></div>}>
+      <SpeakingSetupContent />
+    </Suspense>
   );
 }

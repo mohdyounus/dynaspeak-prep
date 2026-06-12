@@ -18,7 +18,7 @@ async function fetchGithubBackground(githubUsername: string) {
 }
 
 export async function POST(req: Request) {
-  let body: { targetScore?: string; githubUsername?: string; profileSummary?: string };
+  let body: { targetScore?: string; githubUsername?: string; profileSummary?: string; focus?: string[] };
   try {
     body = await req.json();
   } catch {
@@ -28,10 +28,15 @@ export async function POST(req: Request) {
   const targetScore = (body.targetScore || '').trim() || '6.5';
   const githubUsername = (body.githubUsername || '').trim();
   const profileSummary = (body.profileSummary || '').trim();
+  const focus = Array.isArray(body.focus)
+    ? body.focus.map((f) => String(f || '').trim()).filter(Boolean).slice(0, 8)
+    : [];
 
   const github = githubUsername ? await fetchGithubBackground(githubUsername) : { studentBackground: '', technicalInterests: '' };
 
-  const background = [profileSummary, github.studentBackground]
+  const focusLine = focus.length ? `Focus areas for this session: ${focus.join(', ')}.` : '';
+
+  const background = [profileSummary, github.studentBackground, focusLine]
     .filter(Boolean)
     .join(' ')
     .trim() || 'Adult learner preparing for IELTS speaking test in New Zealand.';
@@ -44,6 +49,7 @@ export async function POST(req: Request) {
     interests,
     githubUsername: githubUsername || undefined,
     profileSummary: profileSummary || undefined,
+    focus: focus.length ? focus : undefined,
     part: 'part1'
   });
 

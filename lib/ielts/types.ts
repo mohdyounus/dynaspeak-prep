@@ -35,6 +35,7 @@ export type SpeakingSession = {
   interests: string;
   githubUsername?: string;
   profileSummary?: string;
+  focus?: string[];
   status: SessionStatus;
   part?: SpeakingPart;
   transcript?: TranscriptEntry[];
