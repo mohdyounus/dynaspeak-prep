@@ -29,10 +29,14 @@ export default function SessionPage() {
   const [part, setPart] = useState<SpeakingPart>('part1');
   const [micEnabled, setMicEnabled] = useState(false);
   const [voiceMode, setVoiceMode] = useState<'browser' | 'mock'>('browser');
+  const [elapsedSec, setElapsedSec] = useState(0);
+  const [autoEnding, setAutoEnding] = useState(false);
 
   const voiceRef = useRef<VoiceSession | null>(null);
   const greetedRef = useRef(false);
   const cueCompleteRef = useRef(false);
+  const startedAtRef = useRef<number | null>(null);
+  const endingRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -61,8 +65,17 @@ export default function SessionPage() {
     return SAMPLE_TRANSCRIPT;
   }, [localTranscript, session]);
 
+  const focusHint = useMemo(() => {
+    const items = session?.focus?.filter(Boolean) || [];
+    if (!items.length) return '';
+    return `Focus on: ${items.slice(0, 3).join(', ')}.`;
+  }, [session?.focus]);
+
   useEffect(() => {
     if (!session) return;
+    if (session.part) {
+      setPart(session.part);
+    }
     if (!voiceRef.current) {
       let voice: VoiceSession;
       try {
@@ -99,6 +112,42 @@ export default function SessionPage() {
   }, [session]);
 
   useEffect(() => {
+    if (!sessionId) return;
+    if (!micEnabled) return;
+
+    if (startedAtRef.current === null) {
+      startedAtRef.current = Date.now();
+    }
+
+    const timer = setInterval(() => {
+      if (!startedAtRef.current) return;
+      const next = Math.max(0, Math.floor((Date.now() - startedAtRef.current) / 1000));
+      setElapsedSec(next);
+
+      // Hard cap at 18 minutes (1080 sec) to manage realtime cost and long sessions.
+      if (next >= 1080 && !endingRef.current) {
+        setAutoEnding(true);
+        void endSession(true);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [micEnabled, sessionId]);
+
+  async function persistPart(nextPart: SpeakingPart) {
+    if (!sessionId) return;
+    try {
+      await fetch('/api/session/part', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sessionId, part: nextPart })
+      });
+    } catch {
+      // keep UI responsive even if this best-effort update fails
+    }
+  }
+
+  useEffect(() => {
     if (!micEnabled || !voiceRef.current || greetedRef.current) return;
     greetedRef.current = true;
     void voiceRef.current.speak('Welcome to your IELTS speaking practice. Let us begin with Part 1. Could you introduce yourself?');
@@ -109,12 +158,13 @@ export default function SessionPage() {
 
     if (part === 'part1') {
       const questions = [
-        'Thank you. What kind of work or study do you do at the moment?',
-        'How often do you use English in your daily life?'
+        `Thank you. What kind of work or study do you do at the moment? ${focusHint}`,
+        `How often do you use English in your daily life? ${focusHint}`
       ];
       const studentTurns = transcript.filter((t) => t.role === 'student').length;
       if (studentTurns >= 3) {
         setPart('part2');
+        void persistPart('part2');
         cueCompleteRef.current = false;
         await voiceRef.current.speak('Now we will move to Part 2. Please read the cue card, prepare for one minute, then speak for one to two minutes.');
         return;
@@ -131,13 +181,14 @@ export default function SessionPage() {
       }
 
       setPart('part3');
+      void persistPart('part3');
       await voiceRef.current.speak('Great. We are now in Part 3. Do you think technology has made communication better or worse in society?');
       return;
     }
 
     const followUps = [
-      'That is an interesting point. Could you compare this with the past? ',
-      'What changes do you predict in the next ten years?',
+      `That is an interesting point. Could you compare this with the past? ${focusHint}`,
+      `What changes do you predict in the next ten years? ${focusHint}`,
       'Thank you. We can finish here when you are ready. You can say I am done.'
     ];
     const part3StudentTurns = transcript.filter((t) => t.role === 'student').length;
@@ -191,8 +242,10 @@ export default function SessionPage() {
     return 'Part 3 · Discussion';
   }
 
-  async function endSession() {
+  async function endSession(fromAutoCap = false) {
     if (!sessionId) return;
+    if (endingRef.current) return;
+    endingRef.current = true;
     setBusy(true);
     setError('');
     setState('thinking');
@@ -206,7 +259,8 @@ export default function SessionPage() {
         body: JSON.stringify({
           sessionId,
           transcript: capturedTranscript,
-          durationSec: 600
+          durationSec: elapsedSec,
+          part
         })
       });
       const endData = await endRes.json();
@@ -223,11 +277,19 @@ export default function SessionPage() {
 
       router.push(`/report/${sessionId}`);
     } catch {
-      setError('Network error while ending session.');
+      setError(fromAutoCap ? 'Session reached the 18-minute cap, but network failed while ending. Please try End Interview again.' : 'Network error while ending session.');
     } finally {
       setBusy(false);
       setState('listening');
+      endingRef.current = false;
+      setAutoEnding(false);
     }
+  }
+
+  function fmtDuration(totalSec: number): string {
+    const m = Math.floor(totalSec / 60).toString().padStart(2, '0');
+    const s = Math.floor(totalSec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
   }
 
   return (
@@ -237,8 +299,10 @@ export default function SessionPage() {
         <p className="speaking-muted">Session ID: {sessionId}</p>
         <p className="speaking-muted">Target: {session?.targetScore || '6.5'} | Status: {session?.status || 'loading'}</p>
         <p className="speaking-muted">Voice mode: {voiceMode === 'browser' ? 'Browser Speech (live)' : 'Mock fallback'}</p>
+        <p className="speaking-muted">Session timer: {fmtDuration(elapsedSec)} / 18:00</p>
         <p className="part-chip">{partLabel(part)}</p>
         <p className="speaking-muted">Turn detection: {getSilenceThreshold(part === 'part2' ? 'monologue' : 'normal')}ms silence threshold</p>
+        {autoEnding ? <p className="speaking-error">Maximum session time reached. Ending interview automatically...</p> : null}
 
         <div className="speaking-toolbar">
           <MicButton state={state} disabled={busy} onToggle={toggleMic} />
@@ -258,7 +322,37 @@ export default function SessionPage() {
           <button type="button" onClick={() => setPart('part3')} disabled={busy}>
             Part 3
           </button>
-          <button type="button" onClick={endSession} disabled={busy}>
+          <button
+            type="button"
+            onClick={() => {
+              void persistPart('part1');
+              setPart('part1');
+            }}
+            disabled={busy}
+          >
+            Save Part 1
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void persistPart('part2');
+              setPart('part2');
+            }}
+            disabled={busy}
+          >
+            Save Part 2
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void persistPart('part3');
+              setPart('part3');
+            }}
+            disabled={busy}
+          >
+            Save Part 3
+          </button>
+          <button type="button" onClick={() => void endSession()} disabled={busy}>
             {busy ? 'Ending...' : 'End Interview'}
           </button>
         </div>

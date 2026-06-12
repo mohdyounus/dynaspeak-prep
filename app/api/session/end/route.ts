@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getSession, updateSession } from '@/lib/ielts/store';
-import type { TranscriptEntry } from '@/lib/ielts/types';
+import type { SpeakingPart, TranscriptEntry } from '@/lib/ielts/types';
 
 export async function POST(req: Request) {
-  let body: { sessionId?: string; transcript?: TranscriptEntry[]; durationSec?: number };
+  let body: { sessionId?: string; transcript?: TranscriptEntry[]; durationSec?: number; part?: SpeakingPart };
   try {
     body = await req.json();
   } catch {
@@ -22,10 +22,12 @@ export async function POST(req: Request) {
 
   const transcript = Array.isArray(body.transcript) ? body.transcript : [];
   const durationSec = Number.isFinite(body.durationSec) ? Number(body.durationSec) : undefined;
+  const part = body.part;
 
   const updated = updateSession(sessionId, {
     transcript,
     durationSec,
+    part,
     status: 'ended'
   });
 
