@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { EvaluationReport, SpeakingSession } from '@/lib/ielts/types';
@@ -34,10 +34,16 @@ export default function ReportPage() {
   const [error, setError] = useState('');
   const [evaluating, setEvaluating] = useState(false);
   const [evaluationAttempted, setEvaluationAttempted] = useState(false);
+  const evaluateRequestedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
     async function load() {
+      setSession(null);
+      setError('');
+      setEvaluating(false);
+      setEvaluationAttempted(false);
+      evaluateRequestedRef.current = false;
       try {
         const res = await fetch(`/api/session/${sessionId}`);
         const data = await res.json();
@@ -63,8 +69,10 @@ export default function ReportPage() {
     if (session.status !== 'ended') return;
     if (evaluating) return;
     if (evaluationAttempted) return;
+    if (evaluateRequestedRef.current) return;
 
     const runEvaluate = async () => {
+      evaluateRequestedRef.current = true;
       setEvaluating(true);
       setEvaluationAttempted(true);
       setError('');
