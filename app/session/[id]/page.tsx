@@ -7,7 +7,7 @@ import MicButton from '@/components/MicButton';
 import Waveform from '@/components/Waveform';
 import LiveCaptions from '@/components/LiveCaptions';
 import CueCard from '@/components/CueCard';
-import { BrowserVoiceSession, MockVoiceSession, VoiceSession } from '@/lib/realtime';
+import { BrowserVoiceSession, MockVoiceSession, OpenAIRealtimeVoiceSession, VoiceSession } from '@/lib/realtime';
 import { getSilenceThreshold } from '@/lib/turnDetection';
 
 const SAMPLE_TRANSCRIPT: TranscriptEntry[] = [
@@ -28,7 +28,7 @@ export default function SessionPage() {
   const [localTranscript, setLocalTranscript] = useState<TranscriptEntry[]>([]);
   const [part, setPart] = useState<SpeakingPart>('part1');
   const [micEnabled, setMicEnabled] = useState(false);
-  const [voiceMode, setVoiceMode] = useState<'browser' | 'mock'>('browser');
+  const [voiceMode, setVoiceMode] = useState<'realtime' | 'browser' | 'mock'>('realtime');
   const [elapsedSec, setElapsedSec] = useState(0);
   const [autoEnding, setAutoEnding] = useState(false);
 
@@ -77,14 +77,25 @@ export default function SessionPage() {
       setPart(session.part);
     }
     if (!voiceRef.current) {
-      let voice: VoiceSession;
+      let voice: VoiceSession | null = null;
+
       try {
-        voice = new BrowserVoiceSession();
-        setVoiceMode('browser');
+        voice = new OpenAIRealtimeVoiceSession('/api/session/token');
+        setVoiceMode('realtime');
       } catch {
-        voice = new MockVoiceSession();
-        setVoiceMode('mock');
+        // Defer to browser fallback below.
       }
+
+      if (!voice) {
+        try {
+          voice = new BrowserVoiceSession();
+          setVoiceMode('browser');
+        } catch {
+          voice = new MockVoiceSession();
+          setVoiceMode('mock');
+        }
+      }
+
       voice.onTranscript((entry) => {
         setLocalTranscript((prev) => [...prev, entry]);
 
@@ -165,6 +176,7 @@ export default function SessionPage() {
       if (studentTurns >= 3) {
         setPart('part2');
         void persistPart('part2');
+        await voiceRef.current.setTurnMode('monologue');
         cueCompleteRef.current = false;
         await voiceRef.current.speak('Now we will move to Part 2. Please read the cue card, prepare for one minute, then speak for one to two minutes.');
         return;
@@ -182,6 +194,7 @@ export default function SessionPage() {
 
       setPart('part3');
       void persistPart('part3');
+      await voiceRef.current.setTurnMode('normal');
       await voiceRef.current.speak('Great. We are now in Part 3. Do you think technology has made communication better or worse in society?');
       return;
     }
@@ -205,27 +218,51 @@ export default function SessionPage() {
       try {
         await voiceRef.current.start('IELTS speaking live prompt.');
       } catch {
-        setError('Browser speech recognition is not available, switching to mock mode.');
-        const fallback = new MockVoiceSession();
-        fallback.onTranscript((entry) => {
-          setLocalTranscript((prev) => [...prev, entry]);
-          if (entry.role === 'student') {
-            const normalized = entry.text.toLowerCase();
-            if (normalized.includes("i'm done") || normalized.includes('end interview') || normalized.includes('goodbye')) {
-              endSession();
-              return;
+        // Realtime failed at runtime: try browser speech, then mock as last fallback.
+        try {
+          const browserFallback = new BrowserVoiceSession();
+          browserFallback.onTranscript((entry) => {
+            setLocalTranscript((prev) => [...prev, entry]);
+            if (entry.role === 'student') {
+              const normalized = entry.text.toLowerCase();
+              if (normalized.includes("i'm done") || normalized.includes('end interview') || normalized.includes('goodbye')) {
+                endSession();
+                return;
+              }
+              void respondToStudent(entry.text);
             }
-            void respondToStudent(entry.text);
-          }
-        });
-        fallback.onStateChange((next) => {
-          if (next !== 'ended') {
-            setState(next as 'listening' | 'speaking' | 'thinking');
-          }
-        });
-        voiceRef.current = fallback;
-        setVoiceMode('mock');
-        await fallback.start('IELTS speaking mock prompt.');
+          });
+          browserFallback.onStateChange((next) => {
+            if (next !== 'ended') {
+              setState(next as 'listening' | 'speaking' | 'thinking');
+            }
+          });
+          voiceRef.current = browserFallback;
+          setVoiceMode('browser');
+          await browserFallback.start('IELTS speaking browser fallback prompt.');
+        } catch {
+          setError('Realtime voice failed and browser speech is unavailable, switching to mock mode.');
+          const mockFallback = new MockVoiceSession();
+          mockFallback.onTranscript((entry) => {
+            setLocalTranscript((prev) => [...prev, entry]);
+            if (entry.role === 'student') {
+              const normalized = entry.text.toLowerCase();
+              if (normalized.includes("i'm done") || normalized.includes('end interview') || normalized.includes('goodbye')) {
+                endSession();
+                return;
+              }
+              void respondToStudent(entry.text);
+            }
+          });
+          mockFallback.onStateChange((next) => {
+            if (next !== 'ended') {
+              setState(next as 'listening' | 'speaking' | 'thinking');
+            }
+          });
+          voiceRef.current = mockFallback;
+          setVoiceMode('mock');
+          await mockFallback.start('IELTS speaking mock prompt.');
+        }
       }
       return;
     }
@@ -298,7 +335,9 @@ export default function SessionPage() {
         <h1>Live Speaking Session</h1>
         <p className="speaking-muted">Session ID: {sessionId}</p>
         <p className="speaking-muted">Target: {session?.targetScore || '6.5'} | Status: {session?.status || 'loading'}</p>
-        <p className="speaking-muted">Voice mode: {voiceMode === 'browser' ? 'Browser Speech (live)' : 'Mock fallback'}</p>
+        <p className="speaking-muted">
+          Voice mode: {voiceMode === 'realtime' ? 'OpenAI Realtime' : voiceMode === 'browser' ? 'Browser Speech (fallback)' : 'Mock fallback'}
+        </p>
         <p className="speaking-muted">Session timer: {fmtDuration(elapsedSec)} / 18:00</p>
         <p className="part-chip">{partLabel(part)}</p>
         <p className="speaking-muted">Turn detection: {getSilenceThreshold(part === 'part2' ? 'monologue' : 'normal')}ms silence threshold</p>
