@@ -127,6 +127,32 @@ export default function ReportPage() {
       </section>
 
       <section className="card">
+        <h2>Score Chart</h2>
+        <div className="score-bars">
+          <div className="score-row">
+            <span>Fluency & Coherence</span>
+            <div className="score-track"><div style={{ width: `${(report.criteria.fluencyCoherence.band / 9) * 100}%` }} /></div>
+            <strong>{report.criteria.fluencyCoherence.band.toFixed(1)}</strong>
+          </div>
+          <div className="score-row">
+            <span>Lexical Resource</span>
+            <div className="score-track"><div style={{ width: `${(report.criteria.lexicalResource.band / 9) * 100}%` }} /></div>
+            <strong>{report.criteria.lexicalResource.band.toFixed(1)}</strong>
+          </div>
+          <div className="score-row">
+            <span>Grammar Range & Accuracy</span>
+            <div className="score-track"><div style={{ width: `${(report.criteria.grammaticalRange.band / 9) * 100}%` }} /></div>
+            <strong>{report.criteria.grammaticalRange.band.toFixed(1)}</strong>
+          </div>
+          <div className="score-row">
+            <span>Pronunciation</span>
+            <div className="score-track"><div style={{ width: `${(report.criteria.pronunciation.band / 9) * 100}%` }} /></div>
+            <strong>{report.criteria.pronunciation.band.toFixed(1)}</strong>
+          </div>
+        </div>
+      </section>
+
+      <section className="card">
         <h2>Error Log</h2>
         <div className="error-table">
           {report.errorLog.slice(0, 10).map((e, idx) => (

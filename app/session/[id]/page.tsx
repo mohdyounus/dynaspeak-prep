@@ -39,6 +39,7 @@ export default function SessionPage() {
   const startedAtRef = useRef<number | null>(null);
   const endingRef = useRef(false);
   const reconnectAttemptedRef = useRef(false);
+  const voiceStartedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -66,6 +67,10 @@ export default function SessionPage() {
     if (session?.transcript?.length) return session.transcript;
     return SAMPLE_TRANSCRIPT;
   }, [localTranscript, session]);
+
+  const effectiveExaminerPrompt = useMemo(() => {
+    return session?.examinerPrompt || 'You are an IELTS speaking examiner. Keep responses short, supportive, and exam-structured.';
+  }, [session?.examinerPrompt]);
 
   const focusHint = useMemo(() => {
     const items = session?.focus?.filter(Boolean) || [];
@@ -135,6 +140,8 @@ export default function SessionPage() {
     if (reconnecting) return;
     if (state !== 'thinking') return;
     if (!sessionId) return;
+    if (!voiceStartedRef.current) return;
+    if (endingRef.current) return;
 
     if (reconnectAttemptedRef.current) {
       setError('Realtime connection dropped again. Ending session and saving partial transcript.');
@@ -151,7 +158,7 @@ export default function SessionPage() {
         const nextVoice = new OpenAIRealtimeVoiceSession('/api/session/token');
         attachVoiceHandlers(nextVoice);
         voiceRef.current = nextVoice;
-        await nextVoice.start('IELTS speaking live prompt reconnect.');
+            await nextVoice.start(effectiveExaminerPrompt);
         await nextVoice.setTurnMode(part === 'part2' ? 'monologue' : 'normal');
         await nextVoice.speak('We are back online. Please continue your answer.');
         setError('');
@@ -164,7 +171,7 @@ export default function SessionPage() {
     };
 
     void reconnect();
-  }, [busy, micEnabled, part, reconnecting, sessionId, state, voiceMode]);
+  }, [busy, effectiveExaminerPrompt, micEnabled, part, reconnecting, sessionId, state, voiceMode]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -261,7 +268,8 @@ export default function SessionPage() {
       setMicEnabled(true);
       reconnectAttemptedRef.current = false;
       try {
-        await voiceRef.current.start('IELTS speaking live prompt.');
+        await voiceRef.current.start(effectiveExaminerPrompt);
+        voiceStartedRef.current = true;
       } catch {
         // Realtime failed at runtime: try browser speech, then mock as last fallback.
         try {
@@ -269,14 +277,16 @@ export default function SessionPage() {
           attachVoiceHandlers(browserFallback);
           voiceRef.current = browserFallback;
           setVoiceMode('browser');
-          await browserFallback.start('IELTS speaking browser fallback prompt.');
+          await browserFallback.start(effectiveExaminerPrompt);
+          voiceStartedRef.current = true;
         } catch {
           setError('Realtime voice failed and browser speech is unavailable, switching to mock mode.');
           const mockFallback = new MockVoiceSession();
           attachVoiceHandlers(mockFallback);
           voiceRef.current = mockFallback;
           setVoiceMode('mock');
-          await mockFallback.start('IELTS speaking mock prompt.');
+          await mockFallback.start(effectiveExaminerPrompt);
+          voiceStartedRef.current = true;
         }
       }
       return;
@@ -286,6 +296,7 @@ export default function SessionPage() {
     const endedTranscript = await voiceRef.current.end();
     setLocalTranscript(endedTranscript);
     setState('thinking');
+    voiceStartedRef.current = false;
   }
 
   function partLabel(current: SpeakingPart): string {
@@ -336,6 +347,7 @@ export default function SessionPage() {
       endingRef.current = false;
       setAutoEnding(false);
       setReconnecting(false);
+      voiceStartedRef.current = false;
     }
   }
 

@@ -43,20 +43,21 @@ export async function POST(req: Request) {
 
   const interests = github.technicalInterests || 'work, study, daily life, technology';
 
-  const session = createSession({
-    targetScore,
-    background,
-    interests,
-    githubUsername: githubUsername || undefined,
-    profileSummary: profileSummary || undefined,
-    focus: focus.length ? focus : undefined,
-    part: 'part1'
-  });
-
   const examinerPrompt = buildExaminerPrompt({
     studentBackground: background,
     targetScore,
     technicalInterests: interests
+  });
+
+  const session = createSession({
+    targetScore,
+    background,
+    interests,
+    examinerPrompt,
+    githubUsername: githubUsername || undefined,
+    profileSummary: profileSummary || undefined,
+    focus: focus.length ? focus : undefined,
+    part: 'part1'
   });
 
   const realtimeEnabled = Boolean(process.env.OPENAI_API_KEY);

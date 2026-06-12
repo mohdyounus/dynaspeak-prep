@@ -35,6 +35,7 @@ export function createSession(input: {
   targetScore: string;
   background: string;
   interests: string;
+  examinerPrompt?: string;
   githubUsername?: string;
   profileSummary?: string;
   focus?: string[];
@@ -47,6 +48,7 @@ export function createSession(input: {
     targetScore: input.targetScore,
     background: input.background,
     interests: input.interests,
+    examinerPrompt: input.examinerPrompt,
     githubUsername: input.githubUsername,
     profileSummary: input.profileSummary,
     focus: input.focus,

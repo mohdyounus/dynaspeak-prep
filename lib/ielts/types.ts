@@ -33,6 +33,7 @@ export type SpeakingSession = {
   targetScore: string;
   background: string;
   interests: string;
+  examinerPrompt?: string;
   githubUsername?: string;
   profileSummary?: string;
   focus?: string[];
