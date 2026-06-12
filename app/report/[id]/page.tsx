@@ -32,6 +32,7 @@ export default function ReportPage() {
 
   const [session, setSession] = useState<SpeakingSession | null>(null);
   const [error, setError] = useState('');
+  const [evaluating, setEvaluating] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -54,6 +55,40 @@ export default function ReportPage() {
     };
   }, [sessionId]);
 
+  useEffect(() => {
+    if (!sessionId) return;
+    if (!session) return;
+    if (session.report) return;
+    if (session.status !== 'ended') return;
+    if (evaluating) return;
+
+    const runEvaluate = async () => {
+      setEvaluating(true);
+      setError('');
+      try {
+        const res = await fetch('/api/evaluate', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setError(data?.error || 'Failed to evaluate session report.');
+          return;
+        }
+        if (data?.session) {
+          setSession(data.session as SpeakingSession);
+        }
+      } catch {
+        setError('Network error while generating report.');
+      } finally {
+        setEvaluating(false);
+      }
+    };
+
+    void runEvaluate();
+  }, [evaluating, session, sessionId]);
+
   const report = useMemo(() => session?.report || fallbackReport(), [session]);
   const practiceAgainHref = useMemo(() => {
     const params = new URLSearchParams();
@@ -70,6 +105,7 @@ export default function ReportPage() {
       <section className="card">
         <h1>IELTS Speaking Report</h1>
         <p className="speaking-muted">Session ID: {sessionId}</p>
+        {evaluating ? <p className="speaking-muted">Generating your report...</p> : null}
         {error ? <p className="speaking-error">{error}</p> : null}
 
         <div className="band-hero">Overall Band: {report.overallBand.toFixed(1)}</div>

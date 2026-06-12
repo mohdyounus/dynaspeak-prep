@@ -31,12 +31,14 @@ export default function SessionPage() {
   const [voiceMode, setVoiceMode] = useState<'realtime' | 'browser' | 'mock'>('realtime');
   const [elapsedSec, setElapsedSec] = useState(0);
   const [autoEnding, setAutoEnding] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
 
   const voiceRef = useRef<VoiceSession | null>(null);
   const greetedRef = useRef(false);
   const cueCompleteRef = useRef(false);
   const startedAtRef = useRef<number | null>(null);
   const endingRef = useRef(false);
+  const reconnectAttemptedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -71,6 +73,31 @@ export default function SessionPage() {
     return `Focus on: ${items.slice(0, 3).join(', ')}.`;
   }, [session?.focus]);
 
+  function attachVoiceHandlers(voice: VoiceSession) {
+    voice.onTranscript((entry) => {
+      setLocalTranscript((prev) => [...prev, entry]);
+
+      if (entry.role === 'student') {
+        const normalized = entry.text.toLowerCase();
+        if (
+          normalized.includes("i'm done")
+          || normalized.includes('end interview')
+          || normalized.includes('goodbye')
+        ) {
+          endSession();
+          return;
+        }
+
+        void respondToStudent(entry.text);
+      }
+    });
+    voice.onStateChange((next) => {
+      if (next !== 'ended') {
+        setState(next as 'listening' | 'speaking' | 'thinking');
+      }
+    });
+  }
+
   useEffect(() => {
     if (!session) return;
     if (session.part) {
@@ -96,31 +123,48 @@ export default function SessionPage() {
         }
       }
 
-      voice.onTranscript((entry) => {
-        setLocalTranscript((prev) => [...prev, entry]);
-
-        if (entry.role === 'student') {
-          const normalized = entry.text.toLowerCase();
-          if (
-            normalized.includes("i'm done")
-            || normalized.includes('end interview')
-            || normalized.includes('goodbye')
-          ) {
-            endSession();
-            return;
-          }
-
-          void respondToStudent(entry.text);
-        }
-      });
-      voice.onStateChange((next) => {
-        if (next !== 'ended') {
-          setState(next as 'listening' | 'speaking' | 'thinking');
-        }
-      });
+      attachVoiceHandlers(voice);
       voiceRef.current = voice;
     }
   }, [session]);
+
+  useEffect(() => {
+    if (!micEnabled) return;
+    if (busy) return;
+    if (voiceMode !== 'realtime') return;
+    if (reconnecting) return;
+    if (state !== 'thinking') return;
+    if (!sessionId) return;
+
+    if (reconnectAttemptedRef.current) {
+      setError('Realtime connection dropped again. Ending session and saving partial transcript.');
+      void endSession();
+      return;
+    }
+
+    reconnectAttemptedRef.current = true;
+    setReconnecting(true);
+    setError('Realtime connection dropped. Attempting one reconnect...');
+
+    const reconnect = async () => {
+      try {
+        const nextVoice = new OpenAIRealtimeVoiceSession('/api/session/token');
+        attachVoiceHandlers(nextVoice);
+        voiceRef.current = nextVoice;
+        await nextVoice.start('IELTS speaking live prompt reconnect.');
+        await nextVoice.setTurnMode(part === 'part2' ? 'monologue' : 'normal');
+        await nextVoice.speak('We are back online. Please continue your answer.');
+        setError('');
+      } catch {
+        setError('Reconnect failed. Ending session and saving partial transcript.');
+        void endSession();
+      } finally {
+        setReconnecting(false);
+      }
+    };
+
+    void reconnect();
+  }, [busy, micEnabled, part, reconnecting, sessionId, state, voiceMode]);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -215,50 +259,21 @@ export default function SessionPage() {
     if (!micEnabled) {
       setError('');
       setMicEnabled(true);
+      reconnectAttemptedRef.current = false;
       try {
         await voiceRef.current.start('IELTS speaking live prompt.');
       } catch {
         // Realtime failed at runtime: try browser speech, then mock as last fallback.
         try {
           const browserFallback = new BrowserVoiceSession();
-          browserFallback.onTranscript((entry) => {
-            setLocalTranscript((prev) => [...prev, entry]);
-            if (entry.role === 'student') {
-              const normalized = entry.text.toLowerCase();
-              if (normalized.includes("i'm done") || normalized.includes('end interview') || normalized.includes('goodbye')) {
-                endSession();
-                return;
-              }
-              void respondToStudent(entry.text);
-            }
-          });
-          browserFallback.onStateChange((next) => {
-            if (next !== 'ended') {
-              setState(next as 'listening' | 'speaking' | 'thinking');
-            }
-          });
+          attachVoiceHandlers(browserFallback);
           voiceRef.current = browserFallback;
           setVoiceMode('browser');
           await browserFallback.start('IELTS speaking browser fallback prompt.');
         } catch {
           setError('Realtime voice failed and browser speech is unavailable, switching to mock mode.');
           const mockFallback = new MockVoiceSession();
-          mockFallback.onTranscript((entry) => {
-            setLocalTranscript((prev) => [...prev, entry]);
-            if (entry.role === 'student') {
-              const normalized = entry.text.toLowerCase();
-              if (normalized.includes("i'm done") || normalized.includes('end interview') || normalized.includes('goodbye')) {
-                endSession();
-                return;
-              }
-              void respondToStudent(entry.text);
-            }
-          });
-          mockFallback.onStateChange((next) => {
-            if (next !== 'ended') {
-              setState(next as 'listening' | 'speaking' | 'thinking');
-            }
-          });
+          attachVoiceHandlers(mockFallback);
           voiceRef.current = mockFallback;
           setVoiceMode('mock');
           await mockFallback.start('IELTS speaking mock prompt.');
@@ -320,6 +335,7 @@ export default function SessionPage() {
       setState('listening');
       endingRef.current = false;
       setAutoEnding(false);
+      setReconnecting(false);
     }
   }
 
@@ -342,6 +358,7 @@ export default function SessionPage() {
         <p className="part-chip">{partLabel(part)}</p>
         <p className="speaking-muted">Turn detection: {getSilenceThreshold(part === 'part2' ? 'monologue' : 'normal')}ms silence threshold</p>
         {autoEnding ? <p className="speaking-error">Maximum session time reached. Ending interview automatically...</p> : null}
+        {reconnecting ? <p className="speaking-muted">Reconnecting realtime session...</p> : null}
 
         <div className="speaking-toolbar">
           <MicButton state={state} disabled={busy} onToggle={toggleMic} />
