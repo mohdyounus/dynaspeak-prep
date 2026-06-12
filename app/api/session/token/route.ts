@@ -5,6 +5,9 @@ const OPENAI_REALTIME_TOKEN_ENDPOINTS = [
   'https://api.openai.com/v1/realtime/sessions'
 ] as const;
 
+const REALTIME_MODEL = 'gpt-realtime-2';
+const REALTIME_VOICE = 'marin';
+
 export async function POST() {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
@@ -29,8 +32,15 @@ export async function POST() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'gpt-4o-realtime-preview',
-          voice: 'alloy'
+          session: {
+            type: 'realtime',
+            model: REALTIME_MODEL,
+            audio: {
+              output: {
+                voice: REALTIME_VOICE
+              }
+            }
+          }
         })
       });
 
@@ -42,8 +52,8 @@ export async function POST() {
         continue;
       }
 
-      const parsed = JSON.parse(bodyText) as { client_secret?: { value?: string } };
-      const token = parsed?.client_secret?.value;
+      const parsed = JSON.parse(bodyText) as { client_secret?: { value?: string }; value?: string };
+      const token = parsed?.client_secret?.value || parsed?.value;
       if (!token) {
         continue;
       }

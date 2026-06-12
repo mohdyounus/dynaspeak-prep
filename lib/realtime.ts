@@ -95,8 +95,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    const model = 'gpt-4o-realtime-preview';
-    const sdpRes = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
+    const sdpRes = await fetch('https://api.openai.com/v1/realtime/calls', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${tokenBody.token}`,
