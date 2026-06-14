@@ -21,4 +21,6 @@ model Session {
   profileSummary String?  @db.Text
   focus         Json?
   part          String?
+  sessionType   String   @default("ielts") // ielts or arabic
+  childName     String?  // for arabic tutor sessions
 }

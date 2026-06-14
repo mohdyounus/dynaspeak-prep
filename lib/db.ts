@@ -27,6 +27,14 @@ export const prisma = {
       const client = getPrismaClient();
       return client ? (client as any).session.findMany(args || {}) : [];
     },
+    create: async (args: any) => {
+      const client = getPrismaClient();
+      return client ? (client as any).session.create(args) : null;
+    },
+    update: async (args: any) => {
+      const client = getPrismaClient();
+      return client ? (client as any).session.update(args) : null;
+    },
     upsert: async (args: any) => {
       const client = getPrismaClient();
       return client ? (client as any).session.upsert(args) : null;

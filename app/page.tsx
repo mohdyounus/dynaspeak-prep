@@ -23,6 +23,16 @@ export default async function HomePage() {
     <div className="list-grid">
       {home ? <MarkdownPage title={home.title} html={home.html} /> : null}
 
+      <section className="card" style={{ backgroundColor: '#f0f4e6', borderLeft: '4px solid #2d5016' }}>
+        <h2 style={{ color: '#2d5016' }}>🌙 Arabic Qaida Tutor (NEW)</h2>
+        <p style={{ marginBottom: '1rem' }}>
+          Teach your child the 29 Arabic letters with an AI tutor speaking Hyderabadi Hindi. Perfect for young learners!
+        </p>
+        <Link href="/arabic" style={{ display: 'inline-block', padding: '0.75rem 1.5rem', backgroundColor: '#2d5016', color: 'white', borderRadius: '6px', textDecoration: 'none', fontWeight: '600' }}>
+          Start Learning
+        </Link>
+      </section>
+
       <section className="card">
         <h2>All Lessons</h2>
         <div className="list-grid">
