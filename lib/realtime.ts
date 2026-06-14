@@ -78,11 +78,15 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
 
     this.remoteAudio = new Audio();
     this.remoteAudio.autoplay = true;
+    this.remoteAudio.setAttribute('playsinline', 'true');
     pc.ontrack = (e) => {
       if (this.remoteAudio) {
         this.remoteAudio.srcObject = e.streams[0];
+        // Some browsers require an explicit play() call even with autoplay.
+        void this.remoteAudio.play().catch(() => {
+          // Keep session alive; playback may succeed on the next user interaction.
+        });
       }
-      this.emitState('speaking');
     };
 
     this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -361,6 +365,12 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
         }
         this.bargeInCancelling = false;
         this.emitState('listening');
+        return;
+      }
+
+      if (event.type === 'response.output_audio.delta') {
+        // Mark speaking when actual output audio chunks are flowing.
+        this.emitState('speaking');
         return;
       }
 
