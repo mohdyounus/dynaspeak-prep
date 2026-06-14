@@ -58,8 +58,15 @@ function SessionContent() {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       await new Promise<void>((resolve) => {
         const utterance = new SpeechSynthesisUtterance(line);
-        utterance.lang = 'en-IN';
-        utterance.rate = 0.92;
+        const voices = window.speechSynthesis.getVoices();
+        const arabicVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith('ar'));
+        if (arabicVoice) {
+          utterance.voice = arabicVoice;
+          utterance.lang = arabicVoice.lang;
+        } else {
+          utterance.lang = 'ar-SA';
+        }
+        utterance.rate = 0.9;
         utterance.pitch = 1;
         utterance.onend = () => resolve();
         utterance.onerror = () => resolve();
@@ -220,7 +227,7 @@ function SessionContent() {
       setVoiceState('thinking');
       setSessionActive(true);
       reconnectAttemptedRef.current = false;
-      const greeting = `Salaam, ${session?.childName}! Main aapka Arabic teacher hun. Kaise ho aap aaj? Chalo, hum aaj Arabic qaida sikhenge! Bahut maza ayega!`;
+      const greeting = `السلام عليكم ${session?.childName || ''}! أنا معلم اللغة العربية. هيا نبدأ درس حروف الهجاء. استمع وكرر معي.`;
       const browserSpeechAvailable = typeof window !== 'undefined' && Boolean(window.speechSynthesis);
       const initialGreetingPromise = browserSpeechAvailable ? speakTeacher(greeting) : null;
 
@@ -312,14 +319,11 @@ function SessionContent() {
       if (currentLetterRef.current < getTotalLetters()) {
         const nextLetter = currentLetterRef.current + 1;
         setCurrentLetter(nextLetter);
-        void speakTeacher(
-          `Shabash! Bahut acha! Ab chalo agle letter. ${getLetterByPosition(nextLetter)?.name}. Suno: ${getLetterByPosition(nextLetter)?.name}, ${getLetterByPosition(nextLetter)?.name}. Aap bhi kaho!`
-        );
+        const nextLetterChar = getLetterByPosition(nextLetter)?.arabicChar || '';
+        void speakTeacher(`أحسنت! ممتاز! الحرف التالي هو ${nextLetterChar}. استمع: ${nextLetterChar}، ${nextLetterChar}. الآن كرر أنت.`);
         updateLessonState('ready_to_repeat');
       } else {
-        void speakTeacher(
-          'Bahut acha! Aapne sab letters seekh liye! Allah aapko khush rakhe. Shabash!'
-        );
+        void speakTeacher('رائع جدًا! لقد أنهيت جميع الحروف. بارك الله فيك!');
         updateLessonState('completed');
         setTimeout(() => void endLesson(), 3000);
       }
