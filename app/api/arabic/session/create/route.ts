@@ -23,8 +23,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ sessionId: session.id });
   } catch (err) {
     console.error('Arabic session create error:', err);
+    const message = err instanceof Error ? err.message : String(err);
     return NextResponse.json(
-      { error: 'Failed to create lesson session.' },
+      { error: `Failed to create lesson session: ${message}` },
       { status: 500 }
     );
   }
