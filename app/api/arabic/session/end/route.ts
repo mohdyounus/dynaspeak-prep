@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { updateSession } from '@/lib/ielts/store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,15 +10,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session ID is required.' }, { status: 400 });
     }
 
-    const updated = await prisma.session.update({
-      where: { id: sessionId },
-      data: {
-        status: 'ended',
-        transcript: transcript || [],
-        part: `arabic_letter_${finalLetter || 1}`,
-        durationSec: durationSec || 0
-      }
+    const updated = await updateSession(sessionId, {
+      status: 'ended',
+      transcript: transcript || [],
+      durationSec: durationSec || 0,
+      part: 'part1'
     });
+
+    if (!updated) {
+      return NextResponse.json({ error: 'Session not found.' }, { status: 404 });
+    }
 
     return NextResponse.json({ session: updated });
   } catch (err) {

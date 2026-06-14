@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { getSession } from '@/lib/ielts/store';
 
 export async function GET(
   request: NextRequest,
@@ -8,9 +8,7 @@ export async function GET(
   const { id: sessionId } = context.params;
 
   try {
-    const session = await prisma.session.findUnique({
-      where: { id: sessionId }
-    });
+    const session = await getSession(sessionId);
 
     if (!session) {
       return NextResponse.json(
@@ -22,8 +20,8 @@ export async function GET(
     return NextResponse.json({
       session: {
         id: session.id,
-        childName: session.childName || 'Student',
-        currentLetter: session.part === 'arabic_intro' ? 1 : parseInt(session.part || '1', 10),
+        childName: session.profileSummary || 'Student',
+        currentLetter: 1,
         transcript: session.transcript,
         voiceMode: 'realtime'
       }

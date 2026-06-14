@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
+import { createSession } from '@/lib/ielts/store';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,16 +10,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Child name is required.' }, { status: 400 });
     }
 
-    const session = await prisma.session.create({
-      data: {
-        sessionType: 'arabic',
-        childName,
-        part: 'arabic_intro',
-        targetScore: `Letter ${startLetter}`,
-        background: `Arabic Qaida Learning`,
-        interests: 'Arabic alphabet',
-        status: 'created'
-      }
+    const start = Number(startLetter) > 0 ? Number(startLetter) : 1;
+
+    const session = await createSession({
+      targetScore: `Letter ${start}`,
+      background: `Arabic Qaida Learning for child: ${childName}`,
+      interests: 'Arabic alphabet, qaida, kids learning',
+      profileSummary: childName,
+      part: 'part1'
     });
 
     return NextResponse.json({ sessionId: session.id });
