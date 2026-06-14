@@ -48,8 +48,9 @@ function SessionContent() {
     setLessonState(next);
   }
 
-  async function speakTeacher(text: string) {
+  async function speakTeacher(text: string, speechText?: string) {
     const line = text.trim();
+    const speechLine = (speechText || text).trim();
     if (!line) return;
 
     setVoiceState('speaking');
@@ -57,14 +58,18 @@ function SessionContent() {
 
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       await new Promise<void>((resolve) => {
-        const utterance = new SpeechSynthesisUtterance(line);
+        const utterance = new SpeechSynthesisUtterance(speechLine);
         const voices = window.speechSynthesis.getVoices();
-        const arabicVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith('ar'));
-        if (arabicVoice) {
-          utterance.voice = arabicVoice;
-          utterance.lang = arabicVoice.lang;
+        const preferredVoice =
+          voices.find((voice) => voice.lang.toLowerCase().startsWith('hi')) ||
+          voices.find((voice) => voice.lang.toLowerCase().startsWith('ur')) ||
+          voices.find((voice) => voice.lang.toLowerCase().startsWith('en-in')) ||
+          null;
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+          utterance.lang = preferredVoice.lang;
         } else {
-          utterance.lang = 'ar-SA';
+          utterance.lang = 'en-IN';
         }
         utterance.rate = 0.9;
         utterance.pitch = 1;
@@ -227,9 +232,14 @@ function SessionContent() {
       setVoiceState('thinking');
       setSessionActive(true);
       reconnectAttemptedRef.current = false;
-      const greeting = `السلام عليكم ${session?.childName || ''}! أنا معلم اللغة العربية. هيا نبدأ درس حروف الهجاء. استمع وكرر معي.`;
+      const greeting = `Salaam ${session?.childName || ''}! Main aapka Arabic teacher hun. Chalo aaj Arabic qaida seekhte. Suno aur repeat karo.`;
       const browserSpeechAvailable = typeof window !== 'undefined' && Boolean(window.speechSynthesis);
-      const initialGreetingPromise = browserSpeechAvailable ? speakTeacher(greeting) : null;
+      const initialGreetingPromise = browserSpeechAvailable
+        ? speakTeacher(
+            greeting,
+            `Salaam ${session?.childName || ''}. Main aap ka Arabic teacher hoon. Chalo aaj Arabic qaaida seekhte hain. Suno, aur repeat karo.`
+          )
+        : null;
 
       try {
         const arabicTutorPrompt = `You are a warm Arabic teacher for a 4-year-old in Hyderabadi Hindi. Greet warmly, teach letters one by one. Current letter: ${currentLetterData?.name} (${currentLetterData?.arabicChar}). Be very encouraging.`;
@@ -319,11 +329,19 @@ function SessionContent() {
       if (currentLetterRef.current < getTotalLetters()) {
         const nextLetter = currentLetterRef.current + 1;
         setCurrentLetter(nextLetter);
-        const nextLetterChar = getLetterByPosition(nextLetter)?.arabicChar || '';
-        void speakTeacher(`أحسنت! ممتاز! الحرف التالي هو ${nextLetterChar}. استمع: ${nextLetterChar}، ${nextLetterChar}. الآن كرر أنت.`);
+        const nextLetterData = getLetterByPosition(nextLetter);
+        const nextLetterChar = nextLetterData?.arabicChar || '';
+        const nextLetterName = nextLetterData?.name || 'letter';
+        void speakTeacher(
+          `Shabash! Bahut achha! Ab agla letter: ${nextLetterName} (${nextLetterChar}). Suno: ${nextLetterName}, ${nextLetterName}. Ab aap bolo!`,
+          `Shaabash! Bahut achha. Ab agla letter ${nextLetterName}. Suno: ${nextLetterName}, ${nextLetterName}. Ab aap bolo.`
+        );
         updateLessonState('ready_to_repeat');
       } else {
-        void speakTeacher('رائع جدًا! لقد أنهيت جميع الحروف. بارك الله فيك!');
+        void speakTeacher(
+          'Bahut achha! Aapne sab letters seekh liye. Allah aapko khush rakhe! Shabash!',
+          'Bahut achha! Aap ne sab letters seekh liye. Allah aap ko khush rakhe. Shaabash!'
+        );
         updateLessonState('completed');
         setTimeout(() => void endLesson(), 3000);
       }
