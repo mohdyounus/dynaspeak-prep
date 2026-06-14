@@ -86,7 +86,10 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
     }
     pc.ontrack = (e) => {
       if (this.remoteAudio) {
-        this.remoteAudio.srcObject = e.streams[0];
+        const remoteStream = e.streams[0] || new MediaStream([e.track]);
+        this.remoteAudio.srcObject = remoteStream;
+        this.remoteAudio.muted = false;
+        this.remoteAudio.volume = 1;
         // Some browsers require an explicit play() call even with autoplay.
         void this.remoteAudio.play().catch(() => {
           // Keep session alive; playback may succeed on the next user interaction.

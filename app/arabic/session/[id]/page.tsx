@@ -48,6 +48,32 @@ function SessionContent() {
     setLessonState(next);
   }
 
+  async function speakTeacher(text: string) {
+    const line = text.trim();
+    if (!line) return;
+
+    setVoiceState('speaking');
+    setLocalTranscript((prev) => [...prev, { role: 'examiner', text: line, ts: Date.now() }]);
+
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      await new Promise<void>((resolve) => {
+        const utterance = new SpeechSynthesisUtterance(line);
+        utterance.lang = 'en-IN';
+        utterance.rate = 0.92;
+        utterance.pitch = 1;
+        utterance.onend = () => resolve();
+        utterance.onerror = () => resolve();
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+      });
+      setVoiceState('listening');
+      return;
+    }
+
+    await voiceRef.current?.speak(line);
+    setVoiceState('listening');
+  }
+
   useEffect(() => {
     currentLetterRef.current = currentLetter;
   }, [currentLetter]);
@@ -161,7 +187,7 @@ function SessionContent() {
     updateLessonState('connected');
 
     const greeting = `Salaam, ${session?.childName}! Main aapka Arabic teacher hun. Kaise ho aap aaj? Chalo, hum aaj Arabic qaida sikhenge! Bahut maza ayega!`;
-    await voiceRef.current.speak(greeting);
+    await speakTeacher(greeting);
     // Strict PTT: keep mic off until the student taps Start Repeat.
     await voiceRef.current.pauseListening();
   }
@@ -193,32 +219,55 @@ function SessionContent() {
       setVoiceState('thinking');
       setSessionActive(true);
       reconnectAttemptedRef.current = false;
+      const greeting = `Salaam, ${session?.childName}! Main aapka Arabic teacher hun. Kaise ho aap aaj? Chalo, hum aaj Arabic qaida sikhenge! Bahut maza ayega!`;
+      const browserSpeechAvailable = typeof window !== 'undefined' && Boolean(window.speechSynthesis);
+
       try {
+        if (browserSpeechAvailable) {
+          void speakTeacher(greeting);
+        }
+
         const arabicTutorPrompt = `You are a warm Arabic teacher for a 4-year-old in Hyderabadi Hindi. Greet warmly, teach letters one by one. Current letter: ${currentLetterData?.name} (${currentLetterData?.arabicChar}). Be very encouraging.`;
         await voiceRef.current.start(arabicTutorPrompt);
         await voiceRef.current.pauseListening();
         voiceStartedRef.current = true;
-        await speakOpeningGreeting();
+        if (!browserSpeechAvailable) {
+          await speakOpeningGreeting();
+        } else {
+          greetedRef.current = true;
+          updateLessonState('connected');
+          await voiceRef.current.pauseListening();
+        }
       } catch {
         try {
           const browserFallback = new BrowserVoiceSession();
           attachVoiceHandlers(browserFallback);
           voiceRef.current = browserFallback;
           setVoiceMode('browser');
+          if (typeof window !== 'undefined' && window.speechSynthesis) {
+            void speakTeacher(greeting);
+          }
           await browserFallback.start('Arabic teacher greeting');
           await browserFallback.pauseListening();
           voiceStartedRef.current = true;
-          await speakOpeningGreeting();
+          if (!browserSpeechAvailable) {
+            await speakOpeningGreeting();
+          }
         } catch {
           setError('Voice failed. Using mock mode.');
           const mockFallback = new MockVoiceSession();
           attachVoiceHandlers(mockFallback);
           voiceRef.current = mockFallback;
           setVoiceMode('mock');
+          if (typeof window !== 'undefined' && window.speechSynthesis) {
+            void speakTeacher(greeting);
+          }
           await mockFallback.start('Arabic teacher');
           await mockFallback.pauseListening();
           voiceStartedRef.current = true;
-          await speakOpeningGreeting();
+          if (!browserSpeechAvailable) {
+            await speakOpeningGreeting();
+          }
         }
       }
       return;
@@ -253,12 +302,12 @@ function SessionContent() {
       if (currentLetterRef.current < getTotalLetters()) {
         const nextLetter = currentLetterRef.current + 1;
         setCurrentLetter(nextLetter);
-        void voiceRef.current?.speak(
+        void speakTeacher(
           `Shabash! Bahut acha! Ab chalo agle letter. ${getLetterByPosition(nextLetter)?.name}. Suno: ${getLetterByPosition(nextLetter)?.name}, ${getLetterByPosition(nextLetter)?.name}. Aap bhi kaho!`
         );
         updateLessonState('ready_to_repeat');
       } else {
-        void voiceRef.current?.speak(
+        void speakTeacher(
           'Bahut acha! Aapne sab letters seekh liye! Allah aapko khush rakhe. Shabash!'
         );
         updateLessonState('completed');
