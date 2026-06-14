@@ -41,6 +41,8 @@ function SessionContent() {
   const endingRef = useRef(false);
   const reconnectAttemptedRef = useRef(false);
   const voiceStartedRef = useRef(false);
+  const initialPromptTimeoutRef = useRef<number | null>(null);
+  const initialPromptFallbackRef = useRef(false);
   const studentSilenceTimerRef = useRef<number | null>(null);
   const answerStateRef = useRef<AnswerState>('idle');
   const pendingTextRef = useRef<string[]>([]);
@@ -98,6 +100,10 @@ function SessionContent() {
       setLocalTranscript((prev) => [...prev, entry]);
 
       if (entry.role === 'examiner') {
+        if (initialPromptTimeoutRef.current) {
+          window.clearTimeout(initialPromptTimeoutRef.current);
+          initialPromptTimeoutRef.current = null;
+        }
         // Show latest examiner message as the current question
         setCurrentQuestion(entry.text);
         // Transition to ready_to_answer after connecting or after evaluating
@@ -280,6 +286,56 @@ function SessionContent() {
     await voiceRef.current.speak(greeting);
   }
 
+  async function switchToFallbackVoice() {
+    if (!sessionId) return;
+    if (initialPromptFallbackRef.current) return;
+    initialPromptFallbackRef.current = true;
+
+    try {
+      await voiceRef.current?.end();
+    } catch {
+      // ignore teardown errors; continue fallback setup
+    }
+
+    try {
+      const browserFallback = new BrowserVoiceSession();
+      attachVoiceHandlers(browserFallback);
+      voiceRef.current = browserFallback;
+      setVoiceMode('browser');
+      await browserFallback.start(effectiveExaminerPrompt);
+      voiceStartedRef.current = true;
+      greetedRef.current = false;
+      await speakOpeningGreeting();
+      setError('Realtime audio was silent. Switched to Browser Speech fallback.');
+      return;
+    } catch {
+      // continue to mock fallback
+    }
+
+    const mockFallback = new MockVoiceSession();
+    attachVoiceHandlers(mockFallback);
+    voiceRef.current = mockFallback;
+    setVoiceMode('mock');
+    await mockFallback.start(effectiveExaminerPrompt);
+    voiceStartedRef.current = true;
+    greetedRef.current = false;
+    await speakOpeningGreeting();
+    setError('Realtime and Browser Speech were unavailable. Switched to Mock mode.');
+  }
+
+  function armInitialPromptWatchdog() {
+    if (initialPromptTimeoutRef.current) {
+      window.clearTimeout(initialPromptTimeoutRef.current);
+      initialPromptTimeoutRef.current = null;
+    }
+
+    initialPromptTimeoutRef.current = window.setTimeout(() => {
+      const waitingForFirstExaminerTurn = answerStateRef.current === 'connected';
+      if (!waitingForFirstExaminerTurn) return;
+      void switchToFallbackVoice();
+    }, 9000);
+  }
+
   // PTT: student starts recording their answer
   async function startAnswer() {
     if (!voiceRef.current) return;
@@ -447,10 +503,12 @@ Focus hint: ${focusHint || 'none'}`
       setVoiceState('thinking');
       setSessionActive(true);
       reconnectAttemptedRef.current = false;
+      initialPromptFallbackRef.current = false;
       try {
         await voiceRef.current.start(effectiveExaminerPrompt);
         voiceStartedRef.current = true;
         await speakOpeningGreeting();
+        armInitialPromptWatchdog();
       } catch {
         try {
           const browserFallback = new BrowserVoiceSession();
@@ -475,6 +533,10 @@ Focus hint: ${focusHint || 'none'}`
     }
 
     setSessionActive(false);
+    if (initialPromptTimeoutRef.current) {
+      window.clearTimeout(initialPromptTimeoutRef.current);
+      initialPromptTimeoutRef.current = null;
+    }
     if (studentSilenceTimerRef.current) {
       window.clearTimeout(studentSilenceTimerRef.current);
       studentSilenceTimerRef.current = null;
@@ -506,6 +568,10 @@ Focus hint: ${focusHint || 'none'}`
       if (studentSilenceTimerRef.current) {
         window.clearTimeout(studentSilenceTimerRef.current);
         studentSilenceTimerRef.current = null;
+      }
+      if (initialPromptTimeoutRef.current) {
+        window.clearTimeout(initialPromptTimeoutRef.current);
+        initialPromptTimeoutRef.current = null;
       }
 
       const endRes = await fetch('/api/session/end', {
