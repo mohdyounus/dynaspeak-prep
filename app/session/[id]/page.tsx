@@ -607,7 +607,11 @@ Focus hint: ${focusHint || 'none'}`
           <div className="ptt-controls">
             {(answerState === 'idle' || answerState === 'connected') ? (
               <p className="speaking-muted ptt-hint">
-                {answerState === 'connected' ? '⏳ Waiting for examiner…' : 'Session starting…'}
+                {answerState === 'connected'
+                  ? (voiceState === 'speaking'
+                    ? '🔵 Examiner is asking the question. Please listen.'
+                    : '⏳ Connecting to examiner and preparing first question…')
+                  : 'Session starting…'}
               </p>
             ) : null}
 
