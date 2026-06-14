@@ -43,6 +43,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   private closed = false;
   private state: VoiceState = 'thinking';
   private bargeInCancelling = false;
+  private listeningEnabled = false;
   private pendingToolCalls: Map<string, ToolCall> = new Map();
 
   constructor(private readonly tokenEndpoint = '/api/session/token') {}
@@ -85,7 +86,12 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
     };
 
     this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    this.localStream.getTracks().forEach((track) => pc.addTrack(track, this.localStream as MediaStream));
+    this.localStream.getTracks().forEach((track) => {
+      pc.addTrack(track, this.localStream as MediaStream);
+      // PTT default: keep mic muted until student presses "Start Answer".
+      track.enabled = false;
+    });
+    this.listeningEnabled = false;
 
     const dc = pc.createDataChannel('oai-events');
     this.dc = dc;
@@ -199,11 +205,19 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   }
 
   async pauseListening(): Promise<void> {
-    // Realtime keeps the browser mic stream active; server VAD manages turn-taking.
+    if (!this.localStream) return;
+    this.localStream.getAudioTracks().forEach((track) => {
+      track.enabled = false;
+    });
+    this.listeningEnabled = false;
   }
 
   async resumeListening(): Promise<void> {
-    // Realtime keeps the browser mic stream active; server VAD manages turn-taking.
+    if (!this.localStream) return;
+    this.localStream.getAudioTracks().forEach((track) => {
+      track.enabled = true;
+    });
+    this.listeningEnabled = true;
   }
 
   async commitAnswer(): Promise<void> {
