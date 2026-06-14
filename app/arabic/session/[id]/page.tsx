@@ -289,11 +289,24 @@ function SessionContent() {
         })
       });
 
-      if (res.ok) {
-        router.push('/');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData?.error || `API error: ${res.status}`);
       }
-    } catch {
-      setError('Error ending lesson. Please try again.');
+
+      const data = await res.json();
+      if (data?.session) {
+        // Success - redirect to home
+        setTimeout(() => {
+          router.push('/');
+        }, 500);
+      } else {
+        throw new Error('Invalid response from server');
+      }
+    } catch (err) {
+      console.error('End lesson error:', err);
+      setError(`Error ending lesson: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      endingRef.current = false; // Reset so they can retry
     }
   }
 

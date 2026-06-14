@@ -80,6 +80,10 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
     this.remoteAudio = new Audio();
     this.remoteAudio.autoplay = true;
     this.remoteAudio.setAttribute('playsinline', 'true');
+    // Append to DOM so browser can output audio through speaker
+    if (typeof document !== 'undefined') {
+      document.body.appendChild(this.remoteAudio);
+    }
     pc.ontrack = (e) => {
       if (this.remoteAudio) {
         this.remoteAudio.srcObject = e.streams[0];
@@ -318,6 +322,14 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
     this.micSender = null;
     if (this.remoteAudio) {
       this.remoteAudio.srcObject = null;
+      // Remove from DOM
+      try {
+        if (this.remoteAudio.parentNode) {
+          this.remoteAudio.parentNode.removeChild(this.remoteAudio);
+        }
+      } catch {
+        // ignore
+      }
     }
     this.emitState('ended');
     return this.transcript;
