@@ -37,6 +37,7 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   private pc: RTCPeerConnection | null = null;
   private dc: RTCDataChannel | null = null;
   private localStream: MediaStream | null = null;
+  private micSender: RTCRtpSender | null = null;
   private remoteAudio: HTMLAudioElement | null = null;
   private turnMode: TurnMode = 'normal';
   private started = false;
@@ -91,7 +92,10 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
 
     this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     this.localStream.getTracks().forEach((track) => {
-      pc.addTrack(track, this.localStream as MediaStream);
+      const sender = pc.addTrack(track, this.localStream as MediaStream);
+      if (track.kind === 'audio') {
+        this.micSender = sender;
+      }
       // PTT default: keep mic muted until student presses "Start Answer".
       track.enabled = false;
     });
@@ -209,18 +213,50 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
   }
 
   async pauseListening(): Promise<void> {
-    if (!this.localStream) return;
-    this.localStream.getAudioTracks().forEach((track) => {
-      track.enabled = false;
-    });
+    // Release mic capture so browser tab indicator turns off between turns.
+    if (this.localStream) {
+      this.localStream.getAudioTracks().forEach((track) => {
+        try {
+          track.stop();
+        } catch {
+          // ignore track stop failures
+        }
+      });
+      this.localStream = null;
+    }
+    if (this.micSender) {
+      try {
+        await this.micSender.replaceTrack(null);
+      } catch {
+        // ignore replaceTrack failures; session can still continue
+      }
+    }
     this.listeningEnabled = false;
   }
 
   async resumeListening(): Promise<void> {
-    if (!this.localStream) return;
-    this.localStream.getAudioTracks().forEach((track) => {
-      track.enabled = true;
-    });
+    if (typeof navigator === 'undefined') return;
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const audioTrack = stream.getAudioTracks()[0];
+    if (!audioTrack) {
+      return;
+    }
+
+    if (this.micSender) {
+      try {
+        await this.micSender.replaceTrack(audioTrack);
+      } catch {
+        // Fallback: add track if replace fails
+        if (this.pc) {
+          this.micSender = this.pc.addTrack(audioTrack, stream);
+        }
+      }
+    } else if (this.pc) {
+      this.micSender = this.pc.addTrack(audioTrack, stream);
+    }
+
+    audioTrack.enabled = true;
+    this.localStream = stream;
     this.listeningEnabled = true;
   }
 
@@ -278,6 +314,8 @@ export class OpenAIRealtimeVoiceSession implements VoiceSession {
     } catch {
       // ignore
     }
+    this.localStream = null;
+    this.micSender = null;
     if (this.remoteAudio) {
       this.remoteAudio.srcObject = null;
     }
