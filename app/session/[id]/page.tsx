@@ -221,8 +221,10 @@ function SessionContent() {
         attachVoiceHandlers(nextVoice);
         voiceRef.current = nextVoice;
         await nextVoice.start(effectiveExaminerPrompt);
+        await nextVoice.pauseListening();
         await nextVoice.setTurnMode(partRef.current === 'part2' ? 'monologue' : 'normal');
         await nextVoice.speak('We are back online. Please continue where you left off.');
+        await nextVoice.pauseListening();
         setError('');
       } catch {
         setError('Reconnect failed. Ending session and saving partial transcript.');
@@ -284,6 +286,8 @@ function SessionContent() {
     }
 
     await voiceRef.current.speak(greeting);
+    // Strict PTT: ensure mic stays off until student taps Start Answer.
+    await voiceRef.current.pauseListening();
   }
 
   async function switchToFallbackVoice() {
@@ -306,6 +310,7 @@ function SessionContent() {
       voiceStartedRef.current = true;
       greetedRef.current = false;
       await speakOpeningGreeting();
+      await browserFallback.pauseListening();
       setError('Realtime audio was silent. Switched to Browser Speech fallback.');
       return;
     } catch {
@@ -320,6 +325,7 @@ function SessionContent() {
     voiceStartedRef.current = true;
     greetedRef.current = false;
     await speakOpeningGreeting();
+    await mockFallback.pauseListening();
     setError('Realtime and Browser Speech were unavailable. Switched to Mock mode.');
   }
 
@@ -506,6 +512,7 @@ Focus hint: ${focusHint || 'none'}`
       initialPromptFallbackRef.current = false;
       try {
         await voiceRef.current.start(effectiveExaminerPrompt);
+        await voiceRef.current.pauseListening();
         voiceStartedRef.current = true;
         await speakOpeningGreeting();
         armInitialPromptWatchdog();
@@ -516,6 +523,7 @@ Focus hint: ${focusHint || 'none'}`
           voiceRef.current = browserFallback;
           setVoiceMode('browser');
           await browserFallback.start(effectiveExaminerPrompt);
+          await browserFallback.pauseListening();
           voiceStartedRef.current = true;
           await speakOpeningGreeting();
         } catch {
@@ -525,6 +533,7 @@ Focus hint: ${focusHint || 'none'}`
           voiceRef.current = mockFallback;
           setVoiceMode('mock');
           await mockFallback.start(effectiveExaminerPrompt);
+          await mockFallback.pauseListening();
           voiceStartedRef.current = true;
           await speakOpeningGreeting();
         }

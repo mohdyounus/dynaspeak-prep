@@ -162,6 +162,8 @@ function SessionContent() {
 
     const greeting = `Salaam, ${session?.childName}! Main aapka Arabic teacher hun. Kaise ho aap aaj? Chalo, hum aaj Arabic qaida sikhenge! Bahut maza ayega!`;
     await voiceRef.current.speak(greeting);
+    // Strict PTT: keep mic off until the student taps Start Repeat.
+    await voiceRef.current.pauseListening();
   }
 
   // Session timer
@@ -194,6 +196,7 @@ function SessionContent() {
       try {
         const arabicTutorPrompt = `You are a warm Arabic teacher for a 4-year-old in Hyderabadi Hindi. Greet warmly, teach letters one by one. Current letter: ${currentLetterData?.name} (${currentLetterData?.arabicChar}). Be very encouraging.`;
         await voiceRef.current.start(arabicTutorPrompt);
+        await voiceRef.current.pauseListening();
         voiceStartedRef.current = true;
         await speakOpeningGreeting();
       } catch {
@@ -203,6 +206,7 @@ function SessionContent() {
           voiceRef.current = browserFallback;
           setVoiceMode('browser');
           await browserFallback.start('Arabic teacher greeting');
+          await browserFallback.pauseListening();
           voiceStartedRef.current = true;
           await speakOpeningGreeting();
         } catch {
@@ -212,6 +216,7 @@ function SessionContent() {
           voiceRef.current = mockFallback;
           setVoiceMode('mock');
           await mockFallback.start('Arabic teacher');
+          await mockFallback.pauseListening();
           voiceStartedRef.current = true;
           await speakOpeningGreeting();
         }
