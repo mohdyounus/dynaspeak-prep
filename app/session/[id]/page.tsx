@@ -261,9 +261,8 @@ function SessionContent() {
     }
   }
 
-  // Opening greeting — fires once after session activates
-  useEffect(() => {
-    if (!sessionActive || !voiceRef.current || greetedRef.current) return;
+  async function speakOpeningGreeting() {
+    if (!voiceRef.current || greetedRef.current) return;
     greetedRef.current = true;
     updateAnswerState('connected');
 
@@ -271,14 +270,15 @@ function SessionContent() {
     let greeting: string;
     if (p === 'part2') {
       greeting = 'Welcome. We will start directly with Part 2. Here is your cue card topic. Please take one minute to prepare, then speak for one to two minutes.';
-      void voiceRef.current.setTurnMode('monologue');
+      await voiceRef.current.setTurnMode('monologue');
     } else if (p === 'part3') {
       greeting = 'Welcome. We will jump straight to Part 3 discussion. Do you think technology has improved or harmed society overall? Please share your opinion with reasons.';
     } else {
       greeting = `Welcome to your IELTS speaking practice. Let us begin with Part 1. Could you tell me your full name and what you currently do for work or study?${focusHint ? ' ' + focusHint : ''}`;
     }
-    void voiceRef.current.speak(greeting);
-  }, [sessionActive]);
+
+    await voiceRef.current.speak(greeting);
+  }
 
   // PTT: student starts recording their answer
   async function startAnswer() {
@@ -444,11 +444,13 @@ Focus hint: ${focusHint || 'none'}`
 
     if (!sessionActive) {
       setError('');
+      setVoiceState('thinking');
       setSessionActive(true);
       reconnectAttemptedRef.current = false;
       try {
         await voiceRef.current.start(effectiveExaminerPrompt);
         voiceStartedRef.current = true;
+        await speakOpeningGreeting();
       } catch {
         try {
           const browserFallback = new BrowserVoiceSession();
@@ -457,6 +459,7 @@ Focus hint: ${focusHint || 'none'}`
           setVoiceMode('browser');
           await browserFallback.start(effectiveExaminerPrompt);
           voiceStartedRef.current = true;
+          await speakOpeningGreeting();
         } catch {
           setError('Realtime voice failed and browser speech is unavailable, switching to mock mode.');
           const mockFallback = new MockVoiceSession();
@@ -465,6 +468,7 @@ Focus hint: ${focusHint || 'none'}`
           setVoiceMode('mock');
           await mockFallback.start(effectiveExaminerPrompt);
           voiceStartedRef.current = true;
+          await speakOpeningGreeting();
         }
       }
       return;
