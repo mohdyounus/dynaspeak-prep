@@ -190,6 +190,7 @@ function SessionContent() {
     await speakTeacher(greeting);
     // Strict PTT: keep mic off until the student taps Start Repeat.
     await voiceRef.current.pauseListening();
+    updateLessonState('ready_to_repeat');
   }
 
   // Session timer
@@ -221,12 +222,9 @@ function SessionContent() {
       reconnectAttemptedRef.current = false;
       const greeting = `Salaam, ${session?.childName}! Main aapka Arabic teacher hun. Kaise ho aap aaj? Chalo, hum aaj Arabic qaida sikhenge! Bahut maza ayega!`;
       const browserSpeechAvailable = typeof window !== 'undefined' && Boolean(window.speechSynthesis);
+      const initialGreetingPromise = browserSpeechAvailable ? speakTeacher(greeting) : null;
 
       try {
-        if (browserSpeechAvailable) {
-          void speakTeacher(greeting);
-        }
-
         const arabicTutorPrompt = `You are a warm Arabic teacher for a 4-year-old in Hyderabadi Hindi. Greet warmly, teach letters one by one. Current letter: ${currentLetterData?.name} (${currentLetterData?.arabicChar}). Be very encouraging.`;
         await voiceRef.current.start(arabicTutorPrompt);
         await voiceRef.current.pauseListening();
@@ -237,6 +235,10 @@ function SessionContent() {
           greetedRef.current = true;
           updateLessonState('connected');
           await voiceRef.current.pauseListening();
+          if (initialGreetingPromise) {
+            await initialGreetingPromise;
+          }
+          updateLessonState('ready_to_repeat');
         }
       } catch {
         try {
@@ -244,14 +246,18 @@ function SessionContent() {
           attachVoiceHandlers(browserFallback);
           voiceRef.current = browserFallback;
           setVoiceMode('browser');
-          if (typeof window !== 'undefined' && window.speechSynthesis) {
-            void speakTeacher(greeting);
-          }
           await browserFallback.start('Arabic teacher greeting');
           await browserFallback.pauseListening();
           voiceStartedRef.current = true;
           if (!browserSpeechAvailable) {
             await speakOpeningGreeting();
+          } else {
+            greetedRef.current = true;
+            updateLessonState('connected');
+            if (initialGreetingPromise) {
+              await initialGreetingPromise;
+            }
+            updateLessonState('ready_to_repeat');
           }
         } catch {
           setError('Voice failed. Using mock mode.');
@@ -259,14 +265,18 @@ function SessionContent() {
           attachVoiceHandlers(mockFallback);
           voiceRef.current = mockFallback;
           setVoiceMode('mock');
-          if (typeof window !== 'undefined' && window.speechSynthesis) {
-            void speakTeacher(greeting);
-          }
           await mockFallback.start('Arabic teacher');
           await mockFallback.pauseListening();
           voiceStartedRef.current = true;
           if (!browserSpeechAvailable) {
             await speakOpeningGreeting();
+          } else {
+            greetedRef.current = true;
+            updateLessonState('connected');
+            if (initialGreetingPromise) {
+              await initialGreetingPromise;
+            }
+            updateLessonState('ready_to_repeat');
           }
         }
       }
