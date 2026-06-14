@@ -18,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav>
               <Link href="/">Home</Link>
               <Link href="/speaking">IELTS Speaking Tutor</Link>
+              <Link href="/arabic">Arabic Qaida Tutor</Link>
               <Link href="/quizzes/ai-settings">AI Settings</Link>
               <Link href="/quizzes/ai-quiz">AI Practice Quiz</Link>
               <Link href="/quizzes/mock-test">Final Mock Test</Link>
